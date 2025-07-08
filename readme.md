@@ -102,3 +102,21 @@ source venv/bin/activate
 # Create a .env file (this will be ignored by Git)
 nano .env
 
+gcloud compute ssh --zone "me-west1-b" "saas-portal" --project "bynet-public"
+PUBSUB_SUBSCRIPTION_NAME
+
+# Service Domain
+hossted.endpoints.bynet-public.cloud.goog
+
+# Service Domain
+hossted.endpoints.bynet-public.cloud.goog
+
+# Product ID
+hossted.endpoints.bynet-public.cloud.goog
+# Plan IDs
+# per user 12 month
+per-user-12-month
+
+projects/cloudcommerceproc-prod/topics/bynet-public
+
+ gcloud pubsub subscriptions create bynet-public-sub   --topic=projects/cloudcommerceproc-prod/topics/bynet-public

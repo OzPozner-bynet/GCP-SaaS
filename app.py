@@ -244,13 +244,24 @@ def listen_to_pubsub():
     subscriber = pubsub_v1.SubscriberClient()
     subscription_path = subscriber.subscription_path(GCP_PROJECT_ID, PUBSUB_SUBSCRIPTION_NAME)
 
-    print(f"Listening for messages on {subscription_path}...")
+    print(f"Listening for messages on {subscription_path} ...")
 
     def callback(message: pubsub_v1.subscriber.message.Message):
         print(f"Received message: {message.data.decode('utf-8')}")
         try:
             payload = json.loads(message.data.decode('utf-8'))
-            entitlement_name = payload.get('entitlement')
+
+            raw_entitlement = payload.get('entitlement')
+            entitlement_name = None
+            if isinstance(raw_entitlement, dict):
+                # If 'entitlement' is a dict, try to get 'name' from it
+                entitlement_name = raw_entitlement.get('name')
+            elif isinstance(raw_entitlement, str):
+                # If 'entitlement' is already a string, use it directly
+                entitlement_name = raw_entitlement
+            else:
+                entitlement_name = payload.get('entitlement')
+            
             event_type = payload.get('eventType') # e.g., 'ENTITLEMENT_NEW', 'ENTITLEMENT_CANCELED', 'ENTITLEMENT_PLAN_CHANGED'
 
             if not entitlement_name:
