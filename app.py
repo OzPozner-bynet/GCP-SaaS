@@ -2,6 +2,9 @@ import os
 import json
 import datetime
 import uuid
+#import sys
+import pprint
+
 from functools import wraps
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
@@ -11,6 +14,8 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from google.cloud import pubsub_v1
 from google.oauth2 import service_account
 from google.api_core.exceptions import GoogleAPIError
+from googleapiclient.discovery import build, build_from_document
+
 
 # Replace with your actual project ID and topic name
 # Consider using environment variables or a config.py for these
@@ -18,6 +23,7 @@ GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "your-gcp-project-id")
 PUBSUB_SUBSCRIPTION_NAME = os.environ.get("PUBSUB_SUBSCRIPTION_NAME", "mytopic-subscription") # Subscription name for 'mytopic'
 MARKETPLACE_API_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
 MARKETPLACE_API_VERSION = 'v1'
+PROCUREMENT_API = 'cloudcommerceprocurement'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", "a_very_secret_key_for_dev") # Change for production!
@@ -26,6 +32,20 @@ app.config['SECRET_KEY'] = os.environ.get("FLASK_SECRET_KEY", "a_very_secret_key
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+TIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+
+from google.api_core.exceptions import PermissionDenied
+from google.cloud import pubsub_v1
+
+PROJECT_ID = os.environ['GOOGLE_CLOUD_PROJECT']
+
+PROJECT_IAM_PAGE = 'https://console.cloud.google.com/iam-admin/iam?project={}'
+PROJECT_PUBSUB_PAGE = 'https://console.cloud.google.com/apis/library/pubsub.googleapis.com?project={}'
+
+TOPIC_PROJECT = 'cloudcommerceproc-prod'
+#TOPIC_NAME_PREFIX = 'DEMO-'
+#SUBSCRIPTION_NAME = 'codelab'
 
 # --- User Management (Simplified for this example) ---
 class User(UserMixin):
@@ -119,16 +139,14 @@ def get_marketplace_api_client():
     """
     # Placeholder for actual API client initialization.
     # In a real scenario, you'd use service account credentials.
-    # from google.oauth2 import service_account
-    # credentials = service_account.Credentials.from_service_account_file(
-    #     os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    # )
+    from google.oauth2 import service_account
+    credentials = service_account.Credentials.from_service_account_file( os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") )
     #
-    # client = build('cloudcommerceprocurement', MARKETPLACE_API_VERSION,
-    #                credentials=credentials, discoveryServiceUrl=DISCOVERY_SERVICE_URL)
-    # return client
-    flash("Marketplace API client is a placeholder. Needs real implementation.", "warning")
-    return None # Return None for now
+    DISCOVERY_SERVICE_URL = 'https://cloudcommerceprocurement.googleapis.com/$discovery/rest?version=v1'
+    client = build('cloudcommerceprocurement', MARKETPLACE_API_VERSION, credentials=credentials, discoveryServiceUrl=DISCOVERY_SERVICE_URL)
+    return client
+    # flash("Marketplace API client is a placeholder. Needs real implementation.", "warning")
+    # return None # Return None for now
 
 def approve_entitlement(entitlement_name):
     """
