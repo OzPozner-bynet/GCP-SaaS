@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Billing{% endblock %}
+{% block content %}
+    <h1>Billing & Metering Messages</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Account ID</th>
+                <th>Month</th>
+                <th>Amount (USD)</th>
+                <th>Status</th>
+                <th>Message ID</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account_id, history in billing_data.items() %}
+                {% for record in history %}
+                <tr>
+                    <td>{{ account_id }}</td>
+                    <td>{{ record.month }}</td>
+                    <td>{{ record.amount_usd }}</td>
+                    <td>{{ record.status }}</td>
+                    <td>{{ record.billing_message_id }}</td>
+                    <td>{{ record.timestamp }}</td>
+                </tr>
+                {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

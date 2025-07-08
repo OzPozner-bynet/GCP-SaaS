@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Listings{% endblock %}
+{% block content %}
+    <h1>Products/Listings Used by the System</h1>
+    <p>This page would dynamically list the GCP Marketplace products and plans your SaaS integrates with.</p>
+    <p>For example:</p>
+    <ul>
+        <li><strong>Product:</strong> Your SaaS Product Name (Product ID: `your-product-id`)</li>
+        <li><strong>Plans:</strong>
+            <ul>
+                <li>Basic Plan (Plan ID: `basic-plan-id`)</li>
+                <li>Premium Plan (Plan ID: `premium-plan-id`)</li>
+            </ul>
+        </li>
+    </ul>
+    <p>In a real application, this information might be fetched from a configuration or even directly from the GCP Marketplace API if allowed and necessary.</p>
+{% endblock %}

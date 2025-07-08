@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Account Details - {{ account.company_name }}{% endblock %}
+{% block content %}
+    <h1>Account Details: {{ account.company_name }}</h1>
+    <p><strong>Account ID:</strong> {{ account.account_id }}</p>
+    <p><strong>Email:</strong> {{ account.email }}</p>
+    <p><strong>Status:</strong> {{ account.status }}</p>
+    <p><strong>Created At:</strong> {{ account.created_at }}</p>
+    <p><strong>Last Updated:</strong> {{ account.last_updated }}</p>
+    <p><strong>Marketplace Entitlement ID:</strong> {{ account.marketplace_entitlement_id }}</p>
+    <p><strong>Marketplace Product ID:</strong> {{ account.marketplace_product_id }}</p>
+    <p><strong>Marketplace Plan ID:</strong> {{ account.marketplace_plan_id }}</p>
+
+    <h2>Actions:</h2>
+    {% if account.status == 'pending' %}
+        <form action="/accounts/{{ account.account_id }}/accept" method="POST" style="display:inline;">
+            <button type="submit">Accept Account</button>
+        </form>
+    {% endif %}
+    {% if account.status == 'active' %}
+        <form action="/accounts/{{ account.account_id }}/cancel" method="POST" style="display:inline;">
+            <button type="submit">Cancel Account</button>
+        </form>
+    {% endif %}
+    {% if account.status == 'canceled' %}
+         <form action="/accounts/{{ account.account_id }}/reactivate" method="POST" style="display:inline;">
+            <button type="submit">Reactivate Account</button>
+        </form>
+    {% endif %}
+    <a href="/accounts">Back to Accounts</a>
+{% endblock %}

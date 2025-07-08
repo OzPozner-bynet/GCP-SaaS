@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Sign Up{% endblock %}
+{% block content %}
+    <h1>Sign Up for a New Account</h1>
+    <form method="POST">
+        <label for="company_name">Company Name:</label><br>
+        <input type="text" id="company_name" name="company_name" required><br><br>
+        <label for="email">Contact Email:</label><br>
+        <input type="email" id="email" name="email" required><br><br>
+        <p>By signing up, you agree to our <a href="#">Terms of Service</a>.</p>
+        <input type="submit" value="Submit">
+    </form>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Accounts{% endblock %}
+{% block content %}
+    <h1>Customer Accounts</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Account ID</th>
+                <th>Company Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for account in accounts %}
+            <tr>
+                <td>{{ account.account_id }}</td>
+                <td>{{ account.company_name }}</td>
+                <td>{{ account.email }}</td>
+                <td>{{ account.status }}</td>
+                <td>{{ account.created_at }}</td>
+                <td><a href="/accounts/{{ account.account_id }}">View Details</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
