@@ -402,19 +402,6 @@ def home():
     """
     return render_template('home.html')
 
-###
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        try:
-            company_name = request.form['company_name']
-            email = request.form['email']
-        except KeyError as e:
-            flash(f"Missing required form field: {e}. Please ensure all fields are filled.", 'danger')
-            return redirect(url_for('signup'))
-        # ... rest of the signup logic
-###
-
 
 
 @app.route('/signup', methods=['GET', 'POST'])
