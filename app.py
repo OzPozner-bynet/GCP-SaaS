@@ -38,7 +38,9 @@ TIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 from google.api_core.exceptions import PermissionDenied
 from google.cloud import pubsub_v1
 
-PROJECT_ID = os.environ['GOOGLE_CLOUD_PROJECT']
+#PROJECT_ID = os.environ['GOOGLE_CLOUD_PROJECT']
+#PROJECT_ID = os.environ.get("#PROJECT_ID", "bynet-public")
+
 
 PROJECT_IAM_PAGE = 'https://console.cloud.google.com/iam-admin/iam?project={}'
 PROJECT_PUBSUB_PAGE = 'https://console.cloud.google.com/apis/library/pubsub.googleapis.com?project={}'
@@ -362,12 +364,14 @@ def signup():
     if request.method == 'POST':
         company_name = request.form['company_name']
         email = request.form['email']
+        phone = request.form['phone']
         account_id = f"direct-signup-{uuid.uuid4().hex[:8]}" # Generate a unique ID
 
         new_account = {
             "account_id": account_id,
             "email": email,
             "company_name": company_name,
+            "phone": phone,
             "status": "pending", # Set to pending for admin review
             "created_at": datetime.datetime.utcnow().isoformat() + "Z",
             "last_updated": datetime.datetime.utcnow().isoformat() + "Z",
@@ -390,7 +394,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
         # Simple hardcoded authentication for demonstration
-        if username == "admin" and password == os.environ.get("ADMIN_PASSWORD", "adminpass"): # Use env var for production!
+        if username == "BynetAdmin" and password == os.environ.get("ADMIN_PASSWORD", "changM3in.env"): # Use env var for production!
             user = User(username)
             login_user(user)
             flash('Logged in successfully!', 'success')
