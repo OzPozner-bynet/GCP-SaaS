@@ -412,6 +412,7 @@ def signup():
     """
     if request.method == 'POST':
         try:
+            pprint(request)
             company_name = request.form['company_name']
             email = request.form['email']
             phone = request.form['phone']
