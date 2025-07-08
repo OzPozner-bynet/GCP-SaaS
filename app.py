@@ -19,8 +19,8 @@ from googleapiclient.discovery import build, build_from_document
 
 # Replace with your actual project ID and topic name
 # Consider using environment variables or a config.py for these
-GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "your-gcp-project-id")
-PUBSUB_SUBSCRIPTION_NAME = os.environ.get("PUBSUB_SUBSCRIPTION_NAME", "mytopic-subscription") # Subscription name for 'mytopic'
+GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "bynet-public")
+PUBSUB_SUBSCRIPTION_NAME = os.environ.get("PUBSUB_SUBSCRIPTION_NAME", "bynet-public-sub") # Subscription name for 'mytopic'
 MARKETPLACE_API_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
 MARKETPLACE_API_VERSION = 'v1'
 PROCUREMENT_API = 'cloudcommerceprocurement'
@@ -406,7 +406,7 @@ def login():
         username = request.form['username']
         password = request.form['password']
         # Simple hardcoded authentication for demonstration
-        if username == "BynetAdmin" and password == os.environ.get("ADMIN_PASSWORD", "changM3in.env"): # Use env var for production!
+        if username == os.environ.get("ADMIN_USERNAME", "BynetAdmin") and password == os.environ.get("ADMIN_PASSWORD", "changM3in.env"): # Use env var for production!
             user = User(username)
             login_user(user)
             flash('Logged in successfully!', 'success')
