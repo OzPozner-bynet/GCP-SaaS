@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}GCP Marketplace SaaS Integration{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 </head>
 <body>
     <nav>
@@ -14,6 +15,7 @@
             <a href="/accounts">Accounts</a>
             <a href="/billing">Billing</a>
             <a href="/listings">Listings</a>
+            <a href="/messages">Messages</a> {# NEW LINK #}
             <a href="/logout">Logout</a>
         {% else %}
             <a href="/login">Login</a>

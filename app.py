@@ -80,6 +80,11 @@ def load_user(user_id):
 ACCOUNT_DIR = 'accounts'
 os.makedirs(ACCOUNT_DIR, exist_ok=True)
 
+
+# New directory for Pub/Sub messages
+MESSAGES_DIR = 'messages'
+os.makedirs(MESSAGES_DIR, exist_ok=True)
+
 def get_account_path(account_id):
     """
     Constructs the file path for a given account ID.
@@ -131,6 +136,48 @@ def get_all_accounts():
             if account:
                 accounts.append(account)
     return accounts
+
+
+def save_pubsub_message(message_data):
+    """
+    Saves a Pub/Sub message to a JSON file in the messages directory.
+    Args:
+        message_data (dict): The dictionary containing the Pub/Sub message details.
+    """
+    timestamp = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    message_id = message_data.get('message_id', uuid.uuid4().hex)
+    filename = f"pubsub_message_{timestamp}_{message_id}.json"
+    filepath = os.path.join(MESSAGES_DIR, filename)
+    with open(filepath, 'w') as f:
+        json.dump(message_data, f, indent=4)
+    print(f"Saved Pub/Sub message to {filepath}")
+
+def load_all_pubsub_messages():
+    """
+    Loads all stored Pub/Sub messages from the messages directory.
+    Returns:
+        list: A list of dictionaries, each representing a stored Pub/Sub message.
+    """
+    messages = []
+    for filename in os.listdir(MESSAGES_DIR):
+        if filename.endswith(".json"):
+            filepath = os.path.join(MESSAGES_DIR, filename)
+            try:
+                with open(filepath, 'r') as f:
+                    messages.append(json.load(f))
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON from {filepath}: {e}")
+            except Exception as e:
+                print(f"Error reading file {filepath}: {e}")
+    # Sort messages by timestamp, newest first
+    messages.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    return messages
+
+
+
+
+
+
 
 # --- GCP Marketplace API Client (Placeholder) ---
 def get_marketplace_api_client():
@@ -235,6 +282,8 @@ def send_metering_usage_report(account_id, usage_data):
         return False, None
 
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
+
+# --- Pub/Sub Listener (As a separate thread/process in production) ---
 def listen_to_pubsub():
     """
     Listens for messages on the specified Pub/Sub subscription for new entitlements
@@ -244,59 +293,57 @@ def listen_to_pubsub():
     subscriber = pubsub_v1.SubscriberClient()
     subscription_path = subscriber.subscription_path(GCP_PROJECT_ID, PUBSUB_SUBSCRIPTION_NAME)
 
-    print(f"Listening for messages on {subscription_path} ...")
+    print(f"Listening for messages on {subscription_path}...")
 
     def callback(message: pubsub_v1.subscriber.message.Message):
         print(f"Received message: {message.data.decode('utf-8')}")
         try:
             payload = json.loads(message.data.decode('utf-8'))
 
+            # Store the raw message and some metadata
+            message_to_store = {
+                "message_id": message.message_id,
+                "publish_time": message.publish_time.isoformat(),
+                "data": payload, # Store the parsed payload
+                "raw_data": message.data.decode('utf-8'), # Store raw string for debugging
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+            }
+            save_pubsub_message(message_to_store)
+
             raw_entitlement = payload.get('entitlement')
             entitlement_name = None
+
             if isinstance(raw_entitlement, dict):
-                # If 'entitlement' is a dict, try to get 'name' from it
                 entitlement_name = raw_entitlement.get('name')
             elif isinstance(raw_entitlement, str):
-                # If 'entitlement' is already a string, use it directly
                 entitlement_name = raw_entitlement
-            else:
-                entitlement_name = payload.get('entitlement')
-            
-            event_type = payload.get('eventType') # e.g., 'ENTITLEMENT_NEW', 'ENTITLEMENT_CANCELED', 'ENTITLEMENT_PLAN_CHANGED'
+
+            event_type = payload.get('eventType')
 
             if not entitlement_name:
-                print("Message missing 'entitlement' field. Acknowledging. payload was:")
-                print(payload)
+                print("Message missing 'entitlement' or 'entitlement.name' field. Acknowledging.")
                 message.ack()
                 return
 
-            # Simulate fetching entitlement details from GCP (in reality, you'd use GCP Marketplace API)
-            # For ENTITLEMENT_NEW, the payload might contain more initial details
-            # For this example, we'll extract a dummy account_id and plan from the entitlement name
-            # A real entitlement name looks like: projects/project-id/entitlements/entitlement-id
             entitlement_parts = entitlement_name.split('/')
-            entitlement_id_from_gcp = entitlement_parts[-1] # The actual entitlement ID
-            dummy_account_id = f"gcp-user-{entitlement_id_from_gcp}" # Map to your internal account ID
+            entitlement_id_from_gcp = entitlement_parts[-1]
+            dummy_account_id = f"gcp-user-{entitlement_id_from_gcp}"
 
             account = load_account(dummy_account_id)
 
             if event_type == 'ENTITLEMENT_NEW':
                 if not account:
                     print(f"New subscription received for entitlement: {entitlement_name}")
-                    # Extract more details from payload.
-                    # In a real scenario, you'd get company name, email etc. from a separate signup form
-                    # or from the initial entitlement payload if GCP provides it.
-                    # For this example, we'll create a new account with a pending status.
                     new_account = {
                         "account_id": dummy_account_id,
-                        "email": f"user_{dummy_account_id}@example.com", # Placeholder
-                        "company_name": f"Company {dummy_account_id}", # Placeholder
+                        "email": f"user_{dummy_account_id}@example.com",
+                        "company_name": f"Company {dummy_account_id}",
                         "status": "pending",
                         "created_at": datetime.datetime.utcnow().isoformat() + "Z",
                         "last_updated": datetime.datetime.utcnow().isoformat() + "Z",
                         "marketplace_entitlement_id": entitlement_name,
-                        "marketplace_product_id": "your-saas-product-id", # Your product ID
-                        "marketplace_plan_id": "basic-plan-id", # Or extract from payload
+                        "marketplace_product_id": "your-saas-product-id",
+                        "marketplace_plan_id": "basic-plan-id",
                         "billing_history": []
                     }
                     save_account(new_account)
@@ -304,9 +351,8 @@ def listen_to_pubsub():
                     flash(f"New account {dummy_account_id} from Marketplace is pending review.", "info")
                 else:
                     print(f"Account {dummy_account_id} already exists. Updating status if needed.")
-                    # If an existing account, update its status or details if the event indicates
                     if account['status'] == 'canceled' or account['status'] == 'suspended':
-                        account['status'] = 'pending' # Re-activating
+                        account['status'] = 'pending'
                         save_account(account)
                         flash(f"Account {dummy_account_id} re-activated to pending from Marketplace.", "info")
 
@@ -324,34 +370,23 @@ def listen_to_pubsub():
             elif event_type == 'ENTITLEMENT_PLAN_CHANGED':
                 if account:
                     print(f"Plan change message received for entitlement: {entitlement_name}")
-                    # Update the plan ID in your records
-                    # account['marketplace_plan_id'] = new_plan_id # Extract new plan ID from payload
                     account['last_updated'] = datetime.datetime.utcnow().isoformat() + "Z"
                     save_account(account)
                     print(f"Account {dummy_account_id} plan updated.")
                 else:
                     print(f"Plan change for unknown account/entitlement: {entitlement_name}")
 
-            message.ack() # Acknowledge the message
+            message.ack()
             print(f"Message acknowledged: {message.message_id}")
 
         except Exception as e:
             print(f"Processing error: {e}")
-            message.nack() # Negatively acknowledge if processing fails
+            message.nack()
 
-    # This is a blocking call. In production, run this in a separate thread or worker.
-    # For a simple local test, it might be run directly but will block the Flask server.
-    # To run as a separate thread, you'd do:
-    # import threading
-    # pubsub_thread = threading.Thread(target=subscriber.subscribe, args=(subscription_path, callback))
-    # pubsub_thread.daemon = True # Allow the main program to exit even if thread is running
-    # pubsub_thread.start()
     future = subscriber.subscribe(subscription_path, callback)
     try:
-        # Keep the main thread alive to allow background Pub/Sub listener to run
         future.result()
     except TimeoutError:
-        # If running in a separate process/thread, this part is different
         future.cancel()
         print("Pub/Sub listener stopped due to timeout or shutdown.")
     except Exception as e:
@@ -563,6 +598,18 @@ def listings():
     """
     return render_template('listings.html')
 
+@app.route('/messages')
+@login_required
+def messages():
+    """
+    Displays all stored Pub/Sub messages.
+    Requires authentication.
+    """
+    all_messages = load_all_pubsub_messages()
+    return render_template('messages.html', messages=all_messages)
+
+
+
 # --- Monthly Billing Function (Can be called via CLI or a cron job) ---
 def perform_monthly_billing():
     """
@@ -617,6 +664,7 @@ def perform_monthly_billing():
         else:
             print(f"Account {account_id} already billed for {current_month}. Skipping.")
     print("Monthly billing run completed.")
+
 
 # --- CLI Commands (Using Flask's Click integration) ---
 @app.cli.command("bill-month")

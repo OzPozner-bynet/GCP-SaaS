@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Pub/Sub Messages{% endblock %}
+{% block content %}
+    <h1>Received Pub/Sub Messages</h1>
+    {% if messages %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Message ID</th>
+                    <th>Publish Time</th>
+                    <th>Event Type</th>
+                    <th>Entitlement Name</th>
+                    <th>Raw Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for message in messages %}
+                <tr>
+                    <td>{{ message.message_id }}</td>
+                    <td>{{ message.publish_time }}</td>
+                    <td>{{ message.data.eventType | default('N/A') }}</td>
+                    <td>
+                        {% if message.data.entitlement is string %}
+                            {{ message.data.entitlement }}
+                        {% elif message.data.entitlement is mapping %}
+                            {{ message.data.entitlement.name | default('N/A') }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td><pre>{{ message.raw_data }}</pre></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No Pub/Sub messages received yet.</p>
+    {% endif %}
+{% endblock %}
