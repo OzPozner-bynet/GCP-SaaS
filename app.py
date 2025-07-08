@@ -402,6 +402,21 @@ def home():
     """
     return render_template('home.html')
 
+###
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        try:
+            company_name = request.form['company_name']
+            email = request.form['email']
+        except KeyError as e:
+            flash(f"Missing required form field: {e}. Please ensure all fields are filled.", 'danger')
+            return redirect(url_for('signup'))
+        # ... rest of the signup logic
+###
+
+
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     """
@@ -409,10 +424,14 @@ def signup():
     separate from GCP Marketplace Pub/Sub notifications.
     """
     if request.method == 'POST':
-        company_name = request.form['company_name']
-        email = request.form['email']
-        phone = request.form['phone']
-        account_id = f"direct-signup-{uuid.uuid4().hex[:8]}" # Generate a unique ID
+        try:
+            company_name = request.form['company_name']
+            email = request.form['email']
+            phone = request.form['phone']
+            account_id = f"direct-signup-{uuid.uuid4().hex[:8]}" # Generate a unique ID
+        except KeyError as e:
+            flash(f"Missing required form field: {e}. Please ensure all fields are filled.", 'danger')
+            return redirect(url_for('signup'))    
 
         new_account = {
             "account_id": account_id,
