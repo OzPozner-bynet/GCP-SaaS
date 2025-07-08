@@ -265,7 +265,8 @@ def listen_to_pubsub():
             event_type = payload.get('eventType') # e.g., 'ENTITLEMENT_NEW', 'ENTITLEMENT_CANCELED', 'ENTITLEMENT_PLAN_CHANGED'
 
             if not entitlement_name:
-                print("Message missing 'entitlement' field. Acknowledging.")
+                print("Message missing 'entitlement' field. Acknowledging. payload was:")
+                print(payload)
                 message.ack()
                 return
 
@@ -411,6 +412,7 @@ def login():
             flash('Logged in successfully!', 'success')
             return redirect(request.args.get('next') or url_for('accounts'))
         else:
+            print("faild login for {username} with pass:{password}")
             flash('Invalid username or password.', 'danger')
     return render_template('login.html')
 
