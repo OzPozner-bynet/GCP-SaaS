@@ -505,12 +505,13 @@ def signup():
     if request.method == 'POST':
         try:
             #pprint.pprint(dict(request.headers))
-            #pprint.pprint(dict(request.args))
+            pprint.pprint(dict(request.args))
             pprint.pprint(dict(request.data))
-            real_gcp_marketplace_token=request.get_data('x-gcp-marketplace-token')
+            print(request.headers.get('X-GCP-Marketplace-Token'))
+            real_gcp_marketplace_token=request.headers.get('x-gcp-marketplace-token')
             your_product_domain="marketplace"
 
-            if not request.headers['x-gcp-marketplace-token']:
+            if not real_gcp_marketplace_token:
                     print("Please replace 'YOUR_REAL_X_GCP_MARKETPLACE_TOKEN_STRING_HERE' with an actual x-gcp-marketplace-token for a live test.")
                     # As a fallback for local testing, you might use an unverified decode to inspect structure:
                     try:
