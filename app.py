@@ -507,16 +507,16 @@ def signup():
             real_gcp_marketplace_token=dict(request.form)['x-gcp-marketplace-token']
             print(dict(request.form).keys)
             your_product_domain="marketplace"
-            if not (dict(request.form) ):    
+            if  (True ):    
                 try:
                         print("\n--- Attempting to decode mock/example token (no signature verification) ---")
-                        header = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
-                        payload = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
-                        print("Header:", json.dumps(header, indent=2))
-                        print("Payload:", json.dumps(payload, indent=2))
+                        decoded = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
+                        #payload = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
+                        print("decoded:", json.dumps(decoded, indent=2))
+                        #print("Payload:", json.dumps(payload, indent=2))
                         print("\nNOTE: This is an unverified decode. For security, always use a real token and verify its signature.")
                 except Exception as e:
-                        print(f"Could not even unverified decode the placeholder token: {e}")
+                        print(f"Could not even decode the token: {e}")
             else:
                     try:
                         print(f"Attempting to decode and verify token for audience: {your_product_domain}")
