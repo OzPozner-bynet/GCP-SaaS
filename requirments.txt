@@ -7,3 +7,4 @@ requests==2.31.0
 python-dotenv==1.0.1
 Werkzeug==2.3.7 # Ensure compatibility with Flask
 PyJWT[crypto]
+firebase_admin
