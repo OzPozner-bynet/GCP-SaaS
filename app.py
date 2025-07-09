@@ -314,45 +314,50 @@ def listen_to_pubsub():
             save_pubsub_message(message_to_store)
 
             raw_entitlement = payload.get('entitlement')
-            entitlement_name = None
+            entitlement_id = None
 
             if isinstance(raw_entitlement, dict):
-                entitlement_name = raw_entitlement.get('name')
+                entitlement_id = raw_entitlement.get('id')
             elif isinstance(raw_entitlement, str):
-                entitlement_name = raw_entitlement
+                entitlement_id = raw_entitlement
 
             event_type = payload.get('eventType')
 
-            if not entitlement_name:
-                print("Message missing 'entitlement' or 'entitlement.name' field. Acknowledging.")
+            if not entitlement_id:
+                print("Message missing 'entitlement' or 'entitlement.name' field. Acknowledging. ")
+                pprint.pprint(payload)
                 message.ack()
                 return
 
-            entitlement_parts = entitlement_name.split('/')
+            entitlement_parts = entitlement_id.split('/')
             entitlement_id_from_gcp = entitlement_parts[-1]
             dummy_account_id = f"gcp-user-{entitlement_id_from_gcp}"
 
             account = load_account(dummy_account_id)
 
-            if event_type == 'ENTITLEMENT_NEW':
+            if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
                 if not account:
-                    print(f"New subscription received for entitlement: {entitlement_name}")
+                    print(f"New subscription received for entitlement: {entitlement_id}")
                     new_account = {
+                        "newPlan": raw_entitlement.get( "newPlan"),
+                        "newProduct": raw_entitlement.get("newProduct"),
+                        "newOffer": raw_entitlement.get("newOffer"),
+                        "orderId": raw_entitlement.get( "orderId"),
                         "account_id": dummy_account_id,
                         "email": f"user_{dummy_account_id}@example.com",
                         "company_name": f"Company {dummy_account_id}",
                         "status": "pending",
                         "created_at": datetime.utcnow().isoformat() + "Z",
                         "last_updated": datetime.utcnow().isoformat() + "Z",
-                        "marketplace_entitlement_id": entitlement_name,
+                        "marketplace_entitlement_id": entitlement_id,
                         "marketplace_product_id": "hossted.endpoints.bynet-public.cloud.goog",
                         "marketplace_plan_id": "per-user-12-month",
                         "billing_history": []
                     }
                     save_account(new_account)
-                    print(f"Account {dummy_account_id} created with pending status.Approved entitlement {entitlement_name}")
-                    approve_marketplace_entitlement("bynet-public", "bynet0public", entitlement_name)
-                    flash(f"New account {dummy_account_id} from Marketplace is pending review.approved {entitlement_name}", "info")
+                    print(f"Account {dummy_account_id} created with pending status.Approved entitlement {entitlement_id}")
+                    approve_marketplace_entitlement("bynet-public", "bynet0public", entitlement_id)
+                    flash(f"New account {dummy_account_id} from Marketplace is pending review.approved {entitlement_id}", "info")
                 else:
                     print(f"Account {dummy_account_id} already exists. Updating status if needed.")
                     if account['status'] == 'canceled' or account['status'] == 'suspended':
@@ -362,23 +367,23 @@ def listen_to_pubsub():
 
             elif event_type == 'ENTITLEMENT_CANCELED':
                 if account:
-                    print(f"Cancellation message received for entitlement: {entitlement_name}")
+                    print(f"Cancellation message received for entitlement: {entitlement_id}")
                     account['status'] = 'canceled'
                     account['last_updated'] = datetime.utcnow().isoformat() + "Z"
                     save_account(account)
                     print(f"Account {dummy_account_id} status updated to canceled.")
                     flash(f"Account {dummy_account_id} cancelled via Marketplace.", "warning")
                 else:
-                    print(f"Cancellation for unknown account/entitlement: {entitlement_name}")
+                    print(f"Cancellation for unknown account/entitlement: {entitlement_id}")
 
             elif event_type == 'ENTITLEMENT_PLAN_CHANGED':
                 if account:
-                    print(f"Plan change message received for entitlement: {entitlement_name}")
+                    print(f"Plan change message received for entitlement: {entitlement_id}")
                     account['last_updated'] = datetime.utcnow().isoformat() + "Z"
                     save_account(account)
                     print(f"Account {dummy_account_id} plan updated.")
                 else:
-                    print(f"Plan change for unknown account/entitlement: {entitlement_name}")
+                    print(f"Plan change for unknown account/entitlement: {entitlement_id}")
 
             message.ack()
             print(f"Message acknowledged: {message.message_id}")
@@ -640,14 +645,17 @@ def accept_account(account_id):
 
     if account['status'] == 'pending':
         if account.get('marketplace_entitlement_id'):
+            Eid= account['marketplace_entitlement_id']
             # This account came from GCP Marketplace via Pub/Sub
-            if approve_entitlement(account['marketplace_entitlement_id']):
+            if approve_entitlement(Eid)):
                 account['status'] = 'active'
                 account['last_updated'] = datetime.utcnow().isoformat() + "Z"
                 save_account(account)
-                flash(f'Account {account_id} accepted and Marketplace entitlement approved!', 'success')
+                print(f'Account {account_id} [{Eid}]naccepted and Marketplace entitlement approved! - success')
+                flash(f'Account {account_id}[{Eid}] accepted and Marketplace entitlement approved!', 'success')
             else:
-                flash(f'Failed to approve Marketplace entitlement for {account_id}. Please check logs.', 'danger')
+                print(f'Failed to approve Marketplace entitlement for {account_id} [{Eid}]. Eid  Please check logs.', 'danger')
+                flash(f'Failed to approve Marketplace entitlement for {account_id}. [{Eid}] Please check logs.', 'danger')
         else:
             # This account was a direct signup
             account['status'] = 'active'
