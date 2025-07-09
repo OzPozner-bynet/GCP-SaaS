@@ -147,7 +147,7 @@ def save_pubsub_message(message_data):
     Args:
         message_data (dict): The dictionary containing the Pub/Sub message details.
     """
-    timestamp = datetime.datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
     message_id = message_data.get('message_id', uuid.uuid4().hex)
     filename = f"pubsub_message_{timestamp}_{message_id}.json"
     filepath = os.path.join(MESSAGES_DIR, filename)
@@ -265,7 +265,7 @@ def send_metering_usage_report(account_id, usage_data):
         # This is a conceptual call. Refer to GCP Marketplace Producer API documentation for metering.
         # Example for a hypothetical 'user_count' metric:
         # report_body = {
-        #     "meteringTime": datetime.datetime.utcnow().isoformat() + "Z",
+        #     "meteringTime": datetime.utcnow().isoformat() + "Z",
         #     "metricGroup": [
         #         {
         #             "metric": "user_count",
@@ -309,7 +309,7 @@ def listen_to_pubsub():
                 "publish_time": message.publish_time.isoformat(),
                 "data": payload, # Store the parsed payload
                 "raw_data": message.data.decode('utf-8'), # Store raw string for debugging
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+                "timestamp": datetime.utcnow().isoformat() + "Z"
             }
             save_pubsub_message(message_to_store)
 
@@ -342,8 +342,8 @@ def listen_to_pubsub():
                         "email": f"user_{dummy_account_id}@example.com",
                         "company_name": f"Company {dummy_account_id}",
                         "status": "pending",
-                        "created_at": datetime.datetime.utcnow().isoformat() + "Z",
-                        "last_updated": datetime.datetime.utcnow().isoformat() + "Z",
+                        "created_at": datetime.utcnow().isoformat() + "Z",
+                        "last_updated": datetime.utcnow().isoformat() + "Z",
                         "marketplace_entitlement_id": entitlement_name,
                         "marketplace_product_id": "hossted.endpoints.bynet-public.cloud.goog",
                         "marketplace_plan_id": "per-user-12-month",
@@ -364,7 +364,7 @@ def listen_to_pubsub():
                 if account:
                     print(f"Cancellation message received for entitlement: {entitlement_name}")
                     account['status'] = 'canceled'
-                    account['last_updated'] = datetime.datetime.utcnow().isoformat() + "Z"
+                    account['last_updated'] = datetime.utcnow().isoformat() + "Z"
                     save_account(account)
                     print(f"Account {dummy_account_id} status updated to canceled.")
                     flash(f"Account {dummy_account_id} cancelled via Marketplace.", "warning")
@@ -374,7 +374,7 @@ def listen_to_pubsub():
             elif event_type == 'ENTITLEMENT_PLAN_CHANGED':
                 if account:
                     print(f"Plan change message received for entitlement: {entitlement_name}")
-                    account['last_updated'] = datetime.datetime.utcnow().isoformat() + "Z"
+                    account['last_updated'] = datetime.utcnow().isoformat() + "Z"
                     save_account(account)
                     print(f"Account {dummy_account_id} plan updated.")
                 else:
@@ -554,8 +554,8 @@ def signup():
             "company_name": company_name,
             "phone": phone,
             "status": "pending", # Set to pending for admin review
-            "created_at": datetime.datetime.utcnow().isoformat() + "Z",
-            "last_updated": datetime.datetime.utcnow().isoformat() + "Z",
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "last_updated": datetime.utcnow().isoformat() + "Z",
             "marketplace_entitlement_id": None, # Not from Marketplace initially
             "marketplace_product_id": None,
             "marketplace_plan_id": None,
@@ -643,7 +643,7 @@ def accept_account(account_id):
             # This account came from GCP Marketplace via Pub/Sub
             if approve_entitlement(account['marketplace_entitlement_id']):
                 account['status'] = 'active'
-                account['last_updated'] = datetime.datetime.utcnow().isoformat() + "Z"
+                account['last_updated'] = datetime.utcnow().isoformat() + "Z"
                 save_account(account)
                 flash(f'Account {account_id} accepted and Marketplace entitlement approved!', 'success')
             else:
@@ -651,7 +651,7 @@ def accept_account(account_id):
         else:
             # This account was a direct signup
             account['status'] = 'active'
-            account['last_updated'] = datetime.datetime.utcnow().isoformat() + "Z"
+            account['last_updated'] = datetime.utcnow().isoformat() + "Z"
             save_account(account)
             flash(f'Account {account_id} accepted!', 'success')
     else:
@@ -677,7 +677,7 @@ def cancel_account(account_id):
         # For simplicity, we just update internal status here.
         # GCP Pub/Sub for 'ENTITLEMENT_CANCELED' will handle the actual Marketplace cancellation flow.
         account['status'] = 'canceled'
-        account['last_updated'] = datetime.datetime.utcnow().isoformat() + "Z"
+        account['last_updated'] = datetime.utcnow().isoformat() + "Z"
         save_account(account)
         flash(f'Account {account_id} cancelled.', 'info')
     else:
@@ -701,7 +701,7 @@ def reactivate_account(account_id):
     if account['status'] == 'canceled':
         # In a real scenario, you might interact with GCP Marketplace to resume subscription
         account['status'] = 'active' # Reactivate internally
-        account['last_updated'] = datetime.datetime.utcnow().isoformat() + "Z"
+        account['last_updated'] = datetime.utcnow().isoformat() + "Z"
         save_account(account)
         flash(f'Account {account_id} reactivated.', 'success')
     else:
@@ -750,9 +750,9 @@ def perform_monthly_billing():
     Iterates through active accounts and sends a monthly billing message to GCP.
     This function is intended to be run periodically (e.g., cron job on the 1st of every month).
     """
-    print(f"Initiating monthly billing run at {datetime.datetime.now()}")
+    print(f"Initiating monthly billing run at {datetime.now()}")
     active_accounts = [acc for acc in get_all_accounts() if acc['status'] == 'active']
-    current_month = datetime.datetime.utcnow().strftime('%Y-%m')
+    current_month = datetime.utcnow().strftime('%Y-%m')
 
     for account in active_accounts:
         account_id = account['account_id']
@@ -777,7 +777,7 @@ def perform_monthly_billing():
                     "amount_usd": 100.00, # This would be calculated based on usage and plan
                     "status": "billed",
                     "billing_message_id": billing_message_id,
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+                    "timestamp": datetime.utcnow().isoformat() + "Z"
                 }
                 account.setdefault('billing_history', []).append(new_billing_record)
                 save_account(account)
@@ -790,7 +790,7 @@ def perform_monthly_billing():
                     "amount_usd": 0.00, # Or estimated amount
                     "status": "failed",
                     "billing_message_id": None,
-                    "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
                     "error": "Metering report failed"
                 }
                 account.setdefault('billing_history', []).append(failed_billing_record)
