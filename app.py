@@ -508,7 +508,7 @@ def signup():
             print("ARGS:/n")
             #pprint.pprint(dict(request.args))
             #pprint.pprint(dict(request.data))
-            real_gcp_marketplace_token=dict(request.headers)['x-gcp-marketplace-token'])
+            real_gcp_marketplace_token=dict(request.headers)['x-gcp-marketplace-token']
             print(real_gcp_marketplace_token)
             your_product_domain="marketplace"
 
