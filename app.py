@@ -356,7 +356,7 @@ def listen_to_pubsub():
                     }
                     save_account(new_account)
                     print(f"Account {dummy_account_id} created with pending status.Approved entitlement {entitlement_id}")
-                    approve_marketplace_entitlement("bynet-public", "bynet0public", entitlement_id)
+                    approve_marketplace_entitlement("bynet-public", "bynet-public", entitlement_id)
                     flash(f"New account {dummy_account_id} from Marketplace is pending review.approved {entitlement_id}", "info")
                 else:
                     print(f"Account {dummy_account_id} already exists. Updating status if needed.")
