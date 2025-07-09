@@ -507,7 +507,7 @@ def signup():
             real_gcp_marketplace_token=dict(request.form)['x-gcp-marketplace-token']
             print(dict(request.form).keys)
             your_product_domain="marketplace"
-            if (dict(request.form).keys > 1  ):    
+            if not (dict(request.form) ):    
                 try:
                         print("\n--- Attempting to decode mock/example token (no signature verification) ---")
                         header = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
