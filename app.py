@@ -647,7 +647,7 @@ def accept_account(account_id):
         if account.get('marketplace_entitlement_id'):
             Eid= account['marketplace_entitlement_id']
             # This account came from GCP Marketplace via Pub/Sub
-            if approve_entitlement(Eid)):
+            if approve_entitlement(Eid):
                 account['status'] = 'active'
                 account['last_updated'] = datetime.utcnow().isoformat() + "Z"
                 save_account(account)
