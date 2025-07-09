@@ -510,9 +510,9 @@ def signup():
             if  (True ):    
                 try:
                         print("\n--- Attempting to decode mock/example token (no signature verification) ---")
-                        decoded = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
+                        decoded_data = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
                         #payload = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
-                        print("decoded:", json.dumps(decoded, indent=2))
+                        print("decoded:", json.dumps(decoded_data, indent=2))
                         #print("Payload:", json.dumps(payload, indent=2))
                         print("\nNOTE: This is an unverified decode. For security, always use a real token and verify its signature.")
                 except Exception as e:
