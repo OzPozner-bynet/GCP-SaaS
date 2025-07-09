@@ -412,10 +412,10 @@ def signup():
     """
     if request.method == 'POST':
         try:
-            pprint(dict(request.headers))
-            pprint(dict(request.args))
-            pprint(dict(request.data))
-            pprint(dict(request.form))
+            pprint.pprint(dict(request.headers))
+            pprint.pprint(dict(request.args))
+            pprint.pprint(dict(request.data))
+            pprint.pprint(dict(request.form))
             company_name = request.form['company_name']
             email = request.form['email']
             phone = request.form['phone']
