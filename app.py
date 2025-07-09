@@ -404,6 +404,98 @@ def home():
 
 
 
+
+import jwt
+import requests
+import json
+from datetime import datetime, timezone
+
+def decode_gcp_marketplace_token(token: str, expected_audience: str) -> dict:
+    """
+    Decodes and verifies an x-gcp-marketplace-token.
+
+    Args:
+        token: The x-gcp-marketplace-token string.
+        expected_audience: Your product's domain (e.g., "your-product.com").
+
+    Returns:
+        A dictionary containing the decoded payload if successful.
+
+    Raises:
+        jwt.InvalidTokenError: If the token is invalid, expired, or has an incorrect signature/claims.
+        requests.exceptions.RequestException: If there's an issue fetching Google's public keys.
+    """
+    try:
+        # 1. Decode the header to get the key ID (kid) and issuer (iss)
+        # We decode without verification first to get the issuer URL
+        header = jwt.decode(token, options={"verify_signature": False}, algorithms=["RS256"])
+        kid = header.get("kid")
+        if not kid:
+            raise jwt.InvalidTokenError("Missing 'kid' in token header.")
+
+        # Extract the issuer from the payload (you might need to decode the payload without verification first)
+        unverified_payload = jwt.decode(token, options={"verify_signature": False}, algorithms=["RS256"])
+        issuer_url = unverified_payload.get("iss")
+        if not issuer_url:
+            raise jwt.InvalidTokenError("Missing 'iss' in token payload.")
+
+        # 2. Fetch Google's public keys from the issuer URL
+        # Google's public keys are usually available at a URL like 'https://www.googleapis.com/oauth2/v3/certs'
+        # or similar to the 'iss' value. The 'iss' claim will point to the correct certs URL.
+        # For GCP Marketplace, it's often something like 'https://www.googleapis.com/robot/v1/metadata/x509/cloud-marketplace-partner@prod-env.iam.gserviceaccount.com'
+        certs_url = issuer_url # In many cases, the issuer URL itself is the JWKS endpoint
+        if issuer_url.endswith(".iam.gserviceaccount.com"):
+            certs_url = f"https://www.googleapis.com/oauth2/v3/certs" # Standard Google certs endpoint
+
+        jwks_client = jwt.PyJWKClient(certs_url)
+        signing_key = jwks_client.get_signing_key(kid)
+
+        # 3. Decode and verify the token using the public key
+        decoded_payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=expected_audience, # Validate 'aud' claim
+            options={
+                "require": ["exp", "aud", "iss", "sub"], # Ensure these claims exist
+                "verify_exp": True, # Verify expiration time
+                "verify_aud": True, # Verify audience
+                "verify_iss": True, # Verify issuer
+                "verify_nbf": True, # Verify not before time
+            }
+        )
+
+        # 4. Perform additional custom validations on the payload if needed
+        # For example, check 'sub' is not empty, or validate specific 'roles'
+
+        return decoded_payload
+
+    except jwt.ExpiredSignatureError:
+        print("Token has expired.")
+        raise
+    except jwt.InvalidAudienceError:
+        print(f"Token audience is invalid. Expected: {expected_audience}")
+        raise
+    except jwt.InvalidIssuerError:
+        print(f"Token issuer is invalid.")
+        raise
+    except jwt.InvalidSignatureError:
+        print("Token signature is invalid.")
+        raise
+    except jwt.DecodeError as e:
+        print(f"Error decoding token: {e}")
+        raise
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching public keys from Google: {e}")
+        raise
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        raise
+
+# --- Example Usage ---
+
+
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     """
@@ -415,7 +507,44 @@ def signup():
             pprint.pprint(dict(request.headers))
             pprint.pprint(dict(request.args))
             pprint.pprint(dict(request.data))
-            pprint.pprint(dict(request.form))
+            real_gcp_marketplace_token=request.data['x-gcp-marketplace-token']
+            your_product_domain="marketplace"
+
+            if not request.headers['x-gcp-marketplace-token']:
+                    print("Please replace 'YOUR_REAL_X_GCP_MARKETPLACE_TOKEN_STRING_HERE' with an actual x-gcp-marketplace-token for a live test.")
+                    # As a fallback for local testing, you might use an unverified decode to inspect structure:
+                    try:
+                        print("\n--- Attempting to decode mock/example token (no signature verification) ---")
+                        header = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
+                        payload = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
+                        print("Header:", json.dumps(header, indent=2))
+                        print("Payload:", json.dumps(payload, indent=2))
+                        print("\nNOTE: This is an unverified decode. For security, always use a real token and verify its signature.")
+                    except Exception as e:
+                        print(f"Could not even unverified decode the placeholder token: {e}")
+            else:
+                    try:
+                        print(f"Attempting to decode and verify token for audience: {your_product_domain}")
+                        decoded_data = decode_gcp_marketplace_token(real_gcp_marketplace_token, your_product_domain)
+                        print("\nSuccessfully decoded and verified token!")
+                        print(json.dumps(decoded_data, indent=4))
+
+                        # Access specific claims:
+                        user_id = decoded_data.get("sub")
+                        roles = decoded_data.get("roles", [])
+                        print(f"\nUser ID: {user_id}")
+                        print(f"User Roles: {roles}")
+
+                    except Exception as e:
+                        print(f"\nFailed to decode or verify token: {e}")
+
+
+
+
+
+
+
+
             company_name = request.form['company_name']
             email = request.form['email']
             phone = request.form['phone']
