@@ -504,26 +504,18 @@ def signup():
     """
     if request.method == 'POST':
         try:
-            print("json:\n")
-            pprint.pprint(request.get_json)
-            print("form:\n")
-            pprint.pprint(dict(request.form))
             real_gcp_marketplace_token=dict(request.form)['x-gcp-marketplace-token']
-            print("TOKEN:\n")
-            print(real_gcp_marketplace_token)
+            print(dict(request.form).keys)
             your_product_domain="marketplace"
-
-            if not real_gcp_marketplace_token:
-                    print("Please replace 'YOUR_REAL_X_GCP_MARKETPLACE_TOKEN_STRING_HERE' with an actual x-gcp-marketplace-token for a live test.")
-                    # As a fallback for local testing, you might use an unverified decode to inspect structure:
-                    try:
+            if (dict(request.form).keys > 1  ):    
+                try:
                         print("\n--- Attempting to decode mock/example token (no signature verification) ---")
                         header = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
                         payload = jwt.decode(real_gcp_marketplace_token, options={"verify_signature": False}, algorithms=["RS256"])
                         print("Header:", json.dumps(header, indent=2))
                         print("Payload:", json.dumps(payload, indent=2))
                         print("\nNOTE: This is an unverified decode. For security, always use a real token and verify its signature.")
-                    except Exception as e:
+                except Exception as e:
                         print(f"Could not even unverified decode the placeholder token: {e}")
             else:
                     try:
@@ -532,17 +524,16 @@ def signup():
                         print("\nSuccessfully decoded and verified token!")
                         print(json.dumps(decoded_data, indent=4))
 
-                        # Access specific claims:
-                        user_id = decoded_data.get("sub")
-                        roles = decoded_data.get("roles", [])
-                        print(f"\nUser ID: {user_id}")
-                        print(f"User Roles: {roles}")
-
+                      
                     except Exception as e:
                         print(f"\nFailed to decode or verify token: {e}")
-
-
-
+        
+            if decoded_data:
+            # Access specific claims:
+                user_id = decoded_data.get("sub")
+                roles = decoded_data.get("roles", [])
+                print(f"\nUser ID: {user_id}")
+                print(f"User Roles: {roles}")
 
 
 
