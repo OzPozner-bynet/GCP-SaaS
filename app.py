@@ -342,13 +342,14 @@ def listen_to_pubsub():
                         "created_at": datetime.datetime.utcnow().isoformat() + "Z",
                         "last_updated": datetime.datetime.utcnow().isoformat() + "Z",
                         "marketplace_entitlement_id": entitlement_name,
-                        "marketplace_product_id": "your-saas-product-id",
-                        "marketplace_plan_id": "basic-plan-id",
+                        "marketplace_product_id": "hossted.endpoints.bynet-public.cloud.goog",
+                        "marketplace_plan_id": "per-user-12-month",
                         "billing_history": []
                     }
                     save_account(new_account)
-                    print(f"Account {dummy_account_id} created with pending status.")
-                    flash(f"New account {dummy_account_id} from Marketplace is pending review.", "info")
+                    print(f"Account {dummy_account_id} created with pending status.Approved entitlement {entitlement_name}")
+                    approve_marketplace_entitlement("bynet-public", "bynet0public", entitlement_name)
+                    flash(f"New account {dummy_account_id} from Marketplace is pending review.approved {entitlement_name}", "info")
                 else:
                     print(f"Account {dummy_account_id} already exists. Updating status if needed.")
                     if account['status'] == 'canceled' or account['status'] == 'suspended':
@@ -818,6 +819,64 @@ def listen_pubsub_command():
     print("Starting Pub/Sub listener...")
     listen_to_pubsub()
     print("Pub/Sub listener stopped.")
+
+############3
+
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+
+def approve_marketplace_entitlement(project_id: str, provider_id: str, entitlement_id: str) -> None:
+    """
+    Approves a Google Cloud Marketplace entitlement.
+
+    Args:
+        project_id: Your Google Cloud Project ID.
+        provider_id: Your Google Cloud Marketplace Provider ID.
+        entitlement_id: The ID of the entitlement to approve.
+    """
+    try:
+        # Build the Cloud Commerce Procurement API client
+        # The 'v1' refers to the API version
+        service = build('cloudcommerceprocurement', 'v1')
+
+        # Construct the full entitlement name
+        # Format: providers/{providerId}/entitlements/{entitlement_id}
+        entitlement_name = f"providers/{provider_id}/entitlements/{entitlement_id}"
+
+        print(f"Attempting to approve entitlement: {entitlement_name}")
+
+        # Call the approve method
+        request_body = {} # The approve method typically takes an empty body for simple approval
+        
+        request = service.providers().entitlements().approve(
+            name=entitlement_name,
+            body=request_body
+        )
+        
+        response = request.execute()
+
+        print(f"Entitlement '{entitlement_id}' approval initiated successfully.")
+        print("Response:")
+        print(json.dumps(response, indent=2))
+        print("\nNote: The entitlement state might not immediately change to 'ACTIVE'.")
+        print("You will likely receive another Pub/Sub notification (ENTITLEMENT_ACTIVE) ")
+        print("when the approval process is complete and the entitlement becomes active.")
+
+    except HttpError as e:
+        print(f"An HTTP error occurred: {e.resp.status} - {e.content.decode('utf-8')}")
+        print("Please check your Provider ID, Entitlement ID, and IAM permissions.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+      
+
+
+
+
+
+###############
+
+
 
 if __name__ == '__main__':
     # It's generally not recommended to run Pub/Sub listener directly in the Flask development server
