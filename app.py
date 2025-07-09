@@ -1,6 +1,9 @@
 import os
 import json
-import datetime
+import jwt
+import requests
+from datetime import datetime, timezone
+
 import uuid
 #import sys
 import pprint
@@ -406,10 +409,7 @@ def home():
 
 
 
-import jwt
-import requests
-import json
-from datetime import datetime, timezone
+
 
 def decode_gcp_marketplace_token(token: str, expected_audience: str) -> dict:
     """
