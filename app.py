@@ -504,12 +504,10 @@ def signup():
     """
     if request.method == 'POST':
         try:
-            #pprint.pprint(dict(request.headers))
-            print("ARGS:/n")
-            pprint.pprint(dict(request.args))
-            print("DATA:/n")
-            #pprint.pprint(dict(request.data))
-            real_gcp_marketplace_token=dict(request.args)['x-gcp-marketplace-token']
+            print("DATA:\n")
+            pprint.pprint(dict(request.data))
+            real_gcp_marketplace_token=dict(request.data)['x-gcp-marketplace-token']
+            print("TOKEN:\n")
             print(real_gcp_marketplace_token)
             your_product_domain="marketplace"
 
