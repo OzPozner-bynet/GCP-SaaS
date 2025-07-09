@@ -505,7 +505,7 @@ def signup():
     if request.method == 'POST':
         try:
             print("json:\n")
-            pprint.pprint(dict(request.get_json))
+            pprint.pprint(request.get_json)
             print("form:\n")
             pprint.pprint(dict(request.form))
             real_gcp_marketplace_token=dict(request.form)['x-gcp-marketplace-token']
