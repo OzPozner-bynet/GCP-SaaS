@@ -15,6 +15,7 @@ PROJECT_ID = os.getenv("GCP_PROJECT_ID","bynet-public")
 # The base URL for the Cloud Commerce Partner Procurement API
 API_BASE_URL = "https://cloudcommerceprocurement.googleapis.com/v1"
 
+#https://cloudcommerceprocurement.googleapis.com/v1/providers/bynet-public/entitlements/entitlement_id=b85b0360-0810-4e3e-88a2-61a1846beccb:approve
 
 def approve_entitlement(entitlement_id: str):
     """
