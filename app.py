@@ -494,7 +494,7 @@ def listen_to_pubsub():
                 entitlement_id = None
 
             event_type = payload.get('eventType')
-            pprint.pprint("got message event type is {event_type}")
+            #pprint.pprint("got message event type is {event_type}")
            
 
             if not entitlement_id:
@@ -523,9 +523,15 @@ def listen_to_pubsub():
             if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
                 if not account:
                     print(f"New subscription received for entitlement: {entitlement_id}")
-                    my_accouunt_id = get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id"))
-                    print(f"got account id {my_accouunt_id}")
+                    try:
+                        my_accouunt_id = get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id"))
+                        print(f"got account id {my_accouunt_id}")
+                    except Exception as e:
+                        print(f"An unexpected error occurred: {e}")
+                        my_accouunt_id = dummy_account_id
+
                     new_account = {
+                        "id": my_accouunt_id,
                         "newPlan": raw_entitlement.get( "newPlan"),
                         "newProduct": raw_entitlement.get("newProduct"),
                         "newOffer": raw_entitlement.get("newOffer"),
@@ -540,9 +546,10 @@ def listen_to_pubsub():
                          "billing_history": []
                     }
                     save_account(new_account)
-                    print(f"Account {dummy_account_id} created with pending status.Approved entitlement {entitlement_id}")
+                    print(f"Account {my_accouunt_id } created with pending status.Approved entitlement {entitlement_id}")
                     approve_marketplace_entitlement("bynet-public", "bynet-public", entitlement_id)
-                    flash(f"New account {dummy_account_id} from Marketplace is pending review.approved {entitlement_id}", "info")
+                    flash(f"New account {my_accouunt_id } from Marketplace is pending review.approved {entitlement_id}", "info")
+                    message.ack()
                 else:
                     print(f"Account {dummy_account_id} already exists. Updating status if needed.")
                     if account['status'] == 'canceled' or account['status'] == 'suspended':
