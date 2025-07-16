@@ -99,7 +99,8 @@ def get_account_path(account_id):
     Returns:
         str: The full path to the account's JSON file.
     """
-    return os.path.join(ACCOUNT_DIR, f"{clean_gcp_account_id_prefix(account_id)}.json")
+    account_id=clean_gcp_account_id_prefix(account_id)
+    return os.path.join(ACCOUNT_DIR, f"{account_id}.json")
 
 
 
@@ -145,7 +146,7 @@ def save_account(account_data):
 
     if not account_id:
         raise ValueError("Account data must contain 'account_id'.")
-    account_path = get_account_path(clean_gcp_account_id_prefix(  account_id))
+    account_path = get_account_path(account_id))
     print(f"saving path {account_path}")
     with open(account_path, 'w') as f:
         json.dump(account_data, f, indent=4)
