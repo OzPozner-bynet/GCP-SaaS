@@ -372,8 +372,8 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
         print(f"Detected and removing problematic prefix: '{problematic_prefix}' from '{account_id}'")
         cleaned_id = account_id[len(problematic_prefix):]
     
-    if account_id.startswith("accounts/providers/bynet-public/accounts"):
-        cleaned_id = account_id[len("accounts/providers/bynet-public/accounts"):]
+    if account_id.startswith("providers/bynet-public/accounts/"):
+        cleaned_id = account_id[len("providers/bynet-public/accounts/"):]
     
     if account_id.startswith('accounts/'):
         cleaned_id = account_id[len('accounts/'):]
