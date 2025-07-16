@@ -364,8 +364,7 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
     Returns:
         The cleaned account ID string without the specified prefix.
     """
-    if not account_id:
-        return None
+    cleaned_id=account_id
     # The problematic prefix identified in your error message
     problematic_prefix = 'accounts/providers/bynet-public/accounts/'
 
