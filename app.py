@@ -81,7 +81,10 @@ def load_user(user_id):
 
 # --- Helper Functions for Account Management ---
 ACCOUNT_DIR = 'accounts'
+ENTITLEMENTS_DIR = 'entitlements'
 os.makedirs(ACCOUNT_DIR, exist_ok=True)
+os.makedirs(ENTITLEMENTS_DIR, exist_ok=True)
+
 
 
 # New directory for Pub/Sub messages
@@ -97,6 +100,25 @@ def get_account_path(account_id):
         str: The full path to the account's JSON file.
     """
     return os.path.join(ACCOUNT_DIR, f"{account_id}.json")
+
+
+
+def get_entitlement_path(entitlement_id):
+    """
+    Constructs the file path for a given account ID.
+    Args:
+        account_id (str): The unique ID of the account.
+    Returns:
+        str: The full path to the account's JSON file.
+    """
+    return os.path.join(ENTITLEMENTS_DIR, f"{entitlement_id}.json")
+
+def load_entitlement(entitlement_id):  
+    entitlement_path = get_entitlement_path(entitlement_id)
+    if os.path.exists(entitlement_path):
+        with open(entitlement_path, 'r') as f:
+            return json.load(f)
+    return None
 
 def load_account(account_id):
     """
@@ -125,6 +147,19 @@ def save_account(account_data):
     with open(account_path, 'w') as f:
         json.dump(account_data, f, indent=4)
 
+def save_entitlement(entitlement_data):
+    """
+    Saves entitlement details to its JSON file.
+    Args:
+        entitlement_data (dict): The dictionary containing account details.
+    """
+    entitlement_id = entitlement_data.get('entitlement_id')
+    if not entitlement_id:
+        raise ValueError("entitlement data must contain 'entitlement_id'.")
+    entitlement_path = get_entitlement_path(entitlement_id)
+    with open(entitlement_path, 'w') as f:
+        json.dump(entitlement_data, f, indent=4)        
+
 def get_all_accounts():
     """
     Retrieves all stored accounts.
@@ -139,6 +174,21 @@ def get_all_accounts():
             if account:
                 accounts.append(account)
     return accounts
+
+def get_all_entitlements_from_dir():
+    """
+    Retrieves all stored accounts.
+    Returns:
+        list: A list of dictionaries, each representing an account.
+    """
+    entitlements = []
+    for filename in os.listdir(ENTITLEMENTS_DIR):
+        if filename.endswith(".json"):
+            entitlement_id = filename.replace(".json", "")
+            entitlement = load_entitlement(entitlement_id)
+            if entitlement:
+                entitlements.append(entitlement)
+    return entitlements
 
 
 def save_pubsub_message(message_data):
@@ -321,6 +371,9 @@ def listen_to_pubsub():
 
             if isinstance(raw_entitlement, dict):
                 entitlement_id = raw_entitlement.get('id')
+                pprint.pprint('saveing enttitlment')
+                pprint.pprint(aw_entitlement)
+                save_entitlement(raw_entitlement)
             elif isinstance(raw_entitlement, str):
                 entitlement_id = raw_entitlement
 
@@ -341,6 +394,7 @@ def listen_to_pubsub():
             dummy_account_id = f"gcp-user-{entitlement_id_from_gcp}"
 
             account = load_account(dummy_account_id)
+            #entitlment = load_entitlement(entitlement_id_from_gcp)
 
             if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
                 if not account:
@@ -759,23 +813,61 @@ def messages():
     return render_template('messages.html', messages=all_messages)
 
 
-
+def get_all_entitlements():
+#GET v1/providers/YOUR_PARTNER_ID/entitlements/ENTITLEMENT_ID
+#{
+#  "name": "providers/YOUR_PARTNER_ID/entitlements/ENTITLEMENT_ID",
+#  "provider": "YOUR_PARTNER_ID",
+#  "account": "USER_ACCOUNT_ID",
+#  "product": "example-messaging-service",
+#  "plan": "pro",
+#  "usageReportingId": "USAGE_REPORTING_ID",
+#  "state": "ENTITLEMENT_ACTIVATION_REQUESTED",
+#  "updateTime": "...",
+#  "createTime": "..."
+#}
+    return({})
 # --- Monthly Billing Function (Can be called via CLI or a cron job) ---
 def perform_monthly_billing():
+
     """
     Iterates through active accounts and sends a monthly billing message to GCP.
     This function is intended to be run periodically (e.g., cron job on the 1st of every month).
+    POST https://servicecontrol.googleapis.com/v1/services/example-messaging-service.gcpmarketplace.example.com:report
+
+    {
+  "operations": [{
+    "operationId": "1234-example-operation-id-4567",
+    "operationName": "Hourly Usage Report",
+    "consumerId": "USAGE_REPORTING_ID",
+    "startTime": "2019-02-06T12:00:00Z",
+    "endTime": "2019-02-06T13:00:00Z",
+    "metricValueSets": [{
+      "metricName": "example-messaging-service/UsageInGiB",
+      "metricValues": [{ "int64Value": "150" }]
+    }],
+    "userLabels": {
+      "cloudmarketplace.googleapis.com/resource_name": "order_history_cache",
+      "cloudmarketplace.googleapis.com/container_name": "storefront_prod",
+      "environment": "prod",
+      "region": "us-west2"
+    }
+  }]
+}
     """
     print(f"Initiating monthly billing run at {datetime.now()}")
-    active_accounts = [acc for acc in get_all_accounts() if acc['status'] == 'active']
+    #active_accounts = [acc for acc in get_all_accounts() if acc['status'] == 'active']
+    
     current_month = datetime.utcnow().strftime('%Y-%m')
-
-    for account in active_accounts:
+    active_entitlments = [ent for ent in get_all_entitlements() if ent['state'] == "ENTITLEMENT_ACTIVE" ]
+    
+    
+    for ent in active_entitlments:
+        customerID = ent["usageReportingId"]
         account_id = account['account_id']
-        # Check if already billed for the current month
         already_billed = any(
-            record['month'] == current_month and record['status'] == 'billed'
-            for record in account.get('billing_history', [])
+          record['month'] == current_month and record['status'] == 'billed'
+          for record in account.get('billing_history', [])
         )
 
         if not already_billed:
@@ -814,7 +906,8 @@ def perform_monthly_billing():
         else:
             print(f"Account {account_id} already billed for {current_month}. Skipping.")
     print("Monthly billing run completed.")
-
+        
+        
 
 # --- CLI Commands (Using Flask's Click integration) ---
 @app.cli.command("bill-month")
