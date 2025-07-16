@@ -6,3 +6,5 @@ __pycache__/
 accounts/*.json
 # Optionally, if you have specific logs
 logs/
+*.sh
+
