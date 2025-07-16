@@ -310,7 +310,9 @@ def listen_to_pubsub():
                 "data": payload, # Store the parsed payload
                 "raw_data": message.data.decode('utf-8'), # Store raw string for debugging
                 "timestamp": datetime.utcnow().isoformat() + "Z",
-                "account_id":  payload["entitlement"]["orderId"] if payload["entitlement"] else ""  
+                "account_id":  payload["entitlement"]["orderId"] if payload["entitlement"] else "",  
+                "state":  payload["entitlement"]["state"] if payload["entitlement"] else "", 
+                "usageReportingId": payload["usageReportingId"] if payload["usageReportingId"] else ""
             }
             save_pubsub_message(message_to_store)
 
