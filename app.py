@@ -302,7 +302,7 @@ def listen_to_pubsub():
         print(f"Received message: {message.data.decode('utf-8')}")
         try:
             payload = json.loads(message.data.decode('utf-8'))
-
+           
             # Store the raw message and some metadata
             message_to_store = {
                 "message_id": message.message_id,
@@ -323,12 +323,16 @@ def listen_to_pubsub():
                 entitlement_id = raw_entitlement
 
             event_type = payload.get('eventType')
+            pprint.pprint("got message event type is {event_type}")
+           
 
             if not entitlement_id:
                 print("Message missing 'entitlement' or 'entitlement.name' field. Acknowledging. ")
                 pprint.pprint(payload)
                 message.ack()
                 return
+            else:
+                 pprint.pprint(payload)
 
             entitlement_parts = entitlement_id.split('/')
             entitlement_id_from_gcp = entitlement_parts[-1]
