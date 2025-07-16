@@ -364,8 +364,13 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
     if account_id.startswith(problematic_prefix):
         print(f"Detected and removing problematic prefix: '{problematic_prefix}' from '{account_id}'")
         cleaned_id = account_id[len(problematic_prefix):]
+
+    if account_id.startswith("providers/bynet-public/accounts/"):
+        cleaned_id = account_id[len("providers/bynet-public/accounts/"):]
     else:
         cleaned_id = account_id
+
+
 
     # The get_gcp_account_id_from_entitlement_id function already handles
     # the 'accounts/' prefix. This check ensures that if the input to this
@@ -521,7 +526,7 @@ def listen_to_pubsub():
             if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
                 if not account:
                     print(f"New subscription received for entitlement: {entitlement_id}")
-                    my_accouunt_id = get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id"))
+                    my_accouunt_id = clean_gcp_account_id_prefix(get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id")))
                     print(f"got account id {my_accouunt_id}")
                     new_account = {
                         "newPlan": raw_entitlement.get( "newPlan"),
