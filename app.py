@@ -338,41 +338,53 @@ def send_metering_usage_report(account_id, usage_data):
 
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
 from google.cloud import commerce_consumer_procurement_v1
+
+
+
 def get_account_id(entitlement_id: str) -> str | None:
-    """
+    S"""
     Retrieves the GCP account ID associated with a GCP Marketplace entitlement ID
-    by calling the Google Cloud Marketplace Partner Procurement API.
+    by calling the Google Cloud Commerce Consumer Procurement API's get_order method.
 
     Args:
-        entitlement_id: The full GCP Marketplace entitlement resource name
-                        (e.g., "providers/your-partner-id/entitlements/some-uuid").
+        entitlement_id: The GCP Marketplace entitlement ID string. It will be
+                        prefixed with "providers/bynet-public/entitlements/"
+                        if it doesn't already start with it. This ID is used
+                        as the 'name' for the get_order API call.
 
     Returns:
         The GCP account ID as a string, or None if it cannot be extracted
-        (e.g., if the entitlement ID format is unexpected or the API call fails).
+        (e.g., if the entitlement/order ID format is unexpected or the API call fails).
     """
-     # Define the expected prefix
+    if commerce_consumer_procurement_v1 is None:
+        print("Cannot proceed: Google Cloud Commerce Consumer Procurement library not available.")
+        return None
+
+    # Define the expected prefix for the order/entitlement name
     expected_prefix = "providers/bynet-public/entitlements/"
 
     # Add the prefix if the input entitlement_id does not start with it
     if not entitlement_id.startswith(expected_prefix):
         print(f"Adding prefix '{expected_prefix}' to entitlement ID: {entitlement_id}")
-        entitlement_id = expected_prefix + entitlement_id
+        # The API expects the full resource name, e.g., "providers/p/entitlements/e"
+        full_resource_name = expected_prefix + entitlement_id
+    else:
+        full_resource_name = entitlement_id
 
-    
-    print(f"Attempting to get GCP account ID for entitlement: {entitlement_id}")
+    print(f"Attempting to get GCP account ID for order/entitlement: {full_resource_name}")
 
     try:
-        # Initialize the Partner Procurement Service client
+        # Initialize the Consumer Procurement Service client
         # Ensure your environment is authenticated (e.g., via gcloud auth application-default login)
         client = commerce_consumer_procurement_v1.ConsumerProcurementServiceClient()
 
-        # Make the API call to get the entitlement resource
-        # The entitlement_id should be in the format "providers/{provider_id}/entitlements/{entitlement_id}"
-        entitlement_resource = client.get_entitlement(name=entitlement_id)
+        # Make the API call to get the order resource.
+        # The 'name' parameter for get_order expects the full resource path
+        # which in this context is the entitlement ID formatted as a resource name.
+        order_resource = client.get_order(name=full_resource_name)
 
-        # Extract the 'account' field from the entitlement resource
-        gcp_account_id = entitlement_resource.account
+        # The 'account' field is expected to be part of the Order resource
+        gcp_account_id = order_resource.account
 
         if gcp_account_id:
             # The account ID often comes in the format "accounts/ACCOUNT_NUMBER".
@@ -381,12 +393,11 @@ def get_account_id(entitlement_id: str) -> str | None:
                 return gcp_account_id.split("accounts/")[1]
             return gcp_account_id
         else:
-            print("Error: 'account' field not found in the retrieved entitlement resource.")
+            print("Error: 'account' field not found in the retrieved order resource.")
             return None
     except Exception as e:
-        print(f"An error occurred while calling the API or processing entitlement data: {e}")
+        print(f"An error occurred while calling the API or processing order data: {e}")
         return None
-
 
 
 
