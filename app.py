@@ -339,7 +339,7 @@ def send_metering_usage_report(account_id, usage_data):
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
 from google.cloud import commerce_consumer_procurement_v1
 
-from google.oauth2 import google_auth_oauth2 as google_auth
+import google.auth # Corrected import
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -380,7 +380,7 @@ def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
         # This requires the 'google-api-python-client' library.
         # Ensure your environment is authenticated (e.g., via gcloud auth application-default login)
         # The default credentials will be used.
-        credentials, project = google_auth.default()
+        credentials, project = google.auth.default() # Using google.auth.default()
         service = build(
             "cloudcommerceprocurement",
             "v1",
@@ -416,7 +416,6 @@ def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return None
-
 
 
 def listen_to_pubsub():
