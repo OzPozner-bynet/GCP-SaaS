@@ -181,7 +181,7 @@ def get_all_accounts():
                 accounts.append(account)
     return accounts
 
-def get_all_entitlements_from_dir():
+def get_all_entitlements_from_dir()  -> list[str]:
     """
     Retrieves all stored accounts.
     Returns:
@@ -378,7 +378,7 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
     if account_id.startswith('accounts/'):
         cleaned_id = account_id[len('accounts/'):]
     
-    print(f"got account id:{account_id} returning: {cleaned_id}")
+    #print(f"got account id:{account_id} returning: {cleaned_id}")
     return cleaned_id
 
 def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
@@ -527,7 +527,7 @@ def listen_to_pubsub():
             
             try:
                 my_accouunt_id = clean_gcp_account_id_prefix( get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id")) )
-                print(f"got account id {my_accouunt_id}")
+                #print(f"got account id {my_accouunt_id}")
             except Exception as e:
                     print(f"An unexpected error occurred: {e}")
                     my_accouunt_id = dummy_account_id
@@ -960,102 +960,365 @@ def messages():
     all_messages = load_all_pubsub_messages()
     return render_template('messages.html', messages=all_messages)
 
-
-def get_all_entitlements():
-#GET v1/providers/YOUR_PARTNER_ID/entitlements/ENTITLEMENT_ID
-#{
-#  "name": "providers/YOUR_PARTNER_ID/entitlements/ENTITLEMENT_ID",
-#  "provider": "YOUR_PARTNER_ID",
-#  "account": "USER_ACCOUNT_ID",
-#  "product": "example-messaging-service",
-#  "plan": "pro",
-#  "usageReportingId": "USAGE_REPORTING_ID",
-#  "state": "ENTITLEMENT_ACTIVATION_REQUESTED",
-#  "updateTime": "...",
-#  "createTime": "..."
-#}
-    return({})
-# --- Monthly Billing Function (Can be called via CLI or a cron job) ---
-def perform_monthly_billing():
-
-    """
-    Iterates through active accounts and sends a monthly billing message to GCP.
-    This function is intended to be run periodically (e.g., cron job on the 1st of every month).
-    POST https://servicecontrol.googleapis.com/v1/services/example-messaging-service.gcpmarketplace.example.com:report
-
-    {
-  "operations": [{
-    "operationId": "1234-example-operation-id-4567",
-    "operationName": "Hourly Usage Report",
-    "consumerId": "USAGE_REPORTING_ID",
-    "startTime": "2019-02-06T12:00:00Z",
-    "endTime": "2019-02-06T13:00:00Z",
-    "metricValueSets": [{
-      "metricName": "example-messaging-service/UsageInGiB",
-      "metricValues": [{ "int64Value": "150" }]
-    }],
-    "userLabels": {
-      "cloudmarketplace.googleapis.com/resource_name": "order_history_cache",
-      "cloudmarketplace.googleapis.com/container_name": "storefront_prod",
-      "environment": "prod",
-      "region": "us-west2"
-    }
-  }]
+"""
+{
+  "name": "providers/bynet-public/entitlements/f6f025fa-35eb-40c0-a617-4c4c9b9c8188",
+  "account": "providers/bynet-public/accounts/909aac59-92bb-4684-bf9e-b9fe440e7a71",
+  "provider": "bynet-public",
+  "product": "hossted.endpoints.bynet-public.cloud.goog",
+  "plan": "per-user-12-month",
+  "state": "ENTITLEMENT_ACTIVE",
+  "updateTime": "2025-07-16T13:13:57.948233Z",
+  "createTime": "2025-07-16T13:13:46.533633Z",
+  "usageReportingId": "project_number:212706713297",
+  "productExternalName": "hossted.endpoints.bynet-public.cloud.goog",
+  "offer": "projects/679054047603/services/hossted.endpoints.bynet-public.cloud.goog/standardOffers/a6c2587d-7e8d-4681-b4a7-8146817baf89",
+  "orderId": "f6f025fa-35eb-40c0-a617-4c4c9b9c8188",
+  "entitlementBenefitIds": [
+    "fbde38ed-7793-475f-98c3-8b873f20e6b1"
+  ]
 }
+"""
+
+# --- Monthly Billing Function (Can be called via CLI or a cron job) ---
+
+import json
+import google.auth
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+# The API discovery URL for the Cloud Commerce Partner Procurement API
+PARTNER_PROCUREMENT_API_DISCOVERY_URL = "https://cloudcommerceprocurement.googleapis.com/$discovery/rest?version=v1"
+
+def get_entitlement_from_api_by_id(entitlement_uuid: str) -> dict | None:
+    """
+    Retrieves the full entitlement resource from the Google Cloud Commerce
+    Partner Procurement API using its UUID.
+
+    Args:
+        entitlement_uuid: The UUID part of the entitlement ID (e.g.,
+                          "f6f025fa-35eb-40c0-a617-4c4c9b9c8188").
+
+    Returns:
+        A dictionary representing the entitlement resource, or None if an error occurs.
+    """
+    # Construct the full resource name for the API call
+    full_resource_name = f"providers/bynet-public/entitlements/{entitlement_uuid}"
+    print(f"Attempting to retrieve entitlement: {full_resource_name}")
+
+    try:
+        # Get default credentials
+        credentials, project = google.auth.default()
+
+        # Build the API client dynamically
+        service = build(
+            "cloudcommerceprocurement",
+            "v1",
+            credentials=credentials,
+            discoveryServiceUrl=PARTNER_PROCUREMENT_API_DISCOVERY_URL,
+            cache_discovery=False # Set to True in production for better performance
+        )
+
+        # Make the API call to get the entitlement resource
+        entitlement_resource = service.providers().entitlements().get(name=full_resource_name).execute()
+        return entitlement_resource
+    except HttpError as e:
+        print(f"HTTP Error retrieving entitlement {entitlement_uuid}: {e.resp.status} - {e.content.decode()}")
+        print("Please ensure:")
+        print("1. The Cloud Commerce Partner Procurement API is enabled in your GCP project.")
+        print("2. Your authenticated service account has the 'Cloud Commerce Partner Procurement Viewer' role (or equivalent) for the 'bynet-public' provider and the specific entitlement.")
+        print("3. The entitlement UUID is correct and exists for 'bynet-public' provider.")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred while retrieving entitlement {entitlement_uuid}: {e}")
+        return None
+
+# Placeholder for your existing function to get entitlement IDs from a directory
+# You would replace this with your actual implementation.
+
+
+
+
+
+
+# --- perform reporting
+
+import json
+import uuid
+import pprint
+from datetime import datetime, timedelta
+import google.auth
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+# --- Configuration ---
+# The API discovery URL for the Cloud Commerce Partner Procurement API
+PARTNER_PROCUREMENT_API_DISCOVERY_URL = "https://cloudcommerceprocurement.googleapis.com/$discovery/rest?version=v1"
+# The API discovery URL for the Service Control API (for metering reports)
+SERVICE_CONTROL_API_DISCOVERY_URL = "https://servicecontrol.googleapis.com/$discovery/rest?version=v1"
+# Your service name for metering, as configured in Google Cloud Marketplace
+# IMPORTANT: Replace with your actual service name (e.g., "your-product-service.endpoints.your-project.cloud.goog")
+# This is the service name associated with your product in Cloud Marketplace.
+YOUR_SERVICE_NAME = "hossted.endpoints.bynet-public.cloud.goog"
+# The metric name for your usage, as defined in your service configuration
+# IMPORTANT: Replace with your actual metric name (e.g., "your-product-service/users_active")
+YOUR_METRIC_NAME = "hossted.endpoints.bynet-public.cloud.goog/user"
+"""
+# Metrics IDs
+# per user 12 month
+hossted.endpoints.bynet-public.cloud.goog/user"""
+
+# --- Simulated Local Storage for Account Billing History ---
+# In a real application, this would be a persistent database (e.g., Firestore)
+# or a file-based storage. For this example, it's an in-memory dictionary.
+_LOCAL_ACCOUNT_BILLING_DATA = {}
+
+def _load_account_billing_data(gcp_account_id: str) -> dict:
+    """Simulates loading an account's billing history from local storage."""
+    return _LOCAL_ACCOUNT_BILLING_DATA.get(gcp_account_id, {'billing_history': []})
+
+def _save_account_billing_data(gcp_account_id: str, account_data: dict):
+    """Simulates saving an account's billing history to local storage."""
+    _LOCAL_ACCOUNT_BILLING_DATA[gcp_account_id] = account_data
+    print(f"Saved billing data for account: {gcp_account_id}")
+
+# --- Entitlement Retrieval Functions (from previous turns) ---
+
+def get_entitlement_from_api_by_id(entitlement_uuid: str) -> dict | None:
+    """
+    Retrieves the full entitlement resource from the Google Cloud Commerce
+    Partner Procurement API using its UUID.
+
+    Args:
+        entitlement_uuid: The UUID part of the entitlement ID (e.g.,
+                          "f6f025fa-35eb-40c0-a617-4c4c9b9c8188").
+
+    Returns:
+        A dictionary representing the entitlement resource, or None if an error occurs.
+    """
+    # Construct the full resource name for the API call
+    full_resource_name = f"providers/bynet-public/entitlements/{entitlement_uuid}"
+    # print(f"Attempting to retrieve entitlement: {full_resource_name}") # Uncomment for detailed logging
+
+    try:
+        credentials, project = google.auth.default()
+        service = build(
+            "cloudcommerceprocurement",
+            "v1",
+            credentials=credentials,
+            discoveryServiceUrl=PARTNER_PROCUREMENT_API_DISCOVERY_URL,
+            cache_discovery=False
+        )
+        entitlement_resource = service.providers().entitlements().get(name=full_resource_name).execute()
+        return entitlement_resource
+    except HttpError as e:
+        print(f"HTTP Error retrieving entitlement {entitlement_uuid}: {e.resp.status} - {e.content.decode()}")
+        # print detailed instructions only once or if specifically requested for brevity
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred while retrieving entitlement {entitlement_uuid}: {e}")
+        return None
+
+
+
+def get_all_active_entitlements() -> list[dict]:
+    """
+    Retrieves all active entitlements by fetching their details from the API.
+
+    Returns:
+        A list of dictionaries, where each dictionary represents an active entitlement.
+    """
+    print("\n--- Getting all active entitlements ---")
+    ids = get_all_entitlements_from_dir()
+    active_entitlements = []
+    for entitlement_uuid in ids:
+        entitlement = get_entitlement_from_api_by_id(entitlement_uuid)
+        if entitlement:
+            if entitlement.get("state") == "ENTITLEMENT_ACTIVE":
+                print(f"Found active entitlement: {entitlement.get('name')}")
+                active_entitlements.append(entitlement)
+            else:
+                print(f"Entitlement {entitlement.get('name')} is not active (state: {entitlement.get('state')}).")
+        else:
+            print(f"Skipping entitlement with UUID '{entitlement_uuid}' due to retrieval error.")
+    return active_entitlements
+
+# --- Metering Report Function ---
+
+def send_metering_usage_report(usage_reporting_id: str, usage_data: dict, entitlement_name: str) -> tuple[bool, str | None]:
+    """
+    Sends a usage report to the Google Cloud Service Control API.
+
+    Args:
+        usage_reporting_id: The consumerId for the metering report (e.g., "project_number:12345").
+        usage_data: A dictionary containing the usage metrics (e.g., {'user_count': 100}).
+        entitlement_name: The full resource name of the entitlement
+                          (e.g., "providers/p/entitlements/e").
+
+    Returns:
+        A tuple (success: bool, operation_id: str | None).
+    """
+    print(f"Preparing usage report for {usage_reporting_id}...")
+
+    # Calculate start and end times for the reporting period
+    # For monthly billing, this would typically be the previous month
+    # For simplicity here, let's assume it's for a fixed recent period or current month
+    # Adjust this logic based on your actual billing cycle.
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(days=30) # Example: last 30 days
+
+    # Format times as required by the API
+    start_time_str = start_time.isoformat(timespec='milliseconds') + "Z"
+    end_time_str = end_time.isoformat(timespec='milliseconds') + "Z"
+
+    # Construct metricValueSets based on usage_data
+    metric_value_sets = []
+    # Assuming usage_data contains 'user_count' for 'per-user' plan or 'UsageInGiB' for 'per-gib'
+    # You'll need to adapt this based on your actual metrics and plan.
+    if 'user_count' in usage_data:
+        metric_value_sets.append({
+            "metricName": YOUR_METRIC_NAME, # e.g., "example-messaging-service/active_users"
+            "metricValues": [{"int64Value": str(usage_data['user_count'])}]
+        })
+    elif 'UsageInGiB' in usage_data:
+        metric_value_sets.append({
+            "metricName": YOUR_METRIC_NAME, # e.g., "example-messaging-service/UsageInGiB"
+            "metricValues": [{"int64Value": str(usage_data['UsageInGiB'])}]
+        })
+    else:
+        print("Warning: No recognized usage data found in usage_data dictionary.")
+        return False, None
+
+    # Construct the operation payload
+    operation_payload = {
+        "operationId": str(uuid.uuid4()), # Unique ID for each report operation
+        "operationName": "Monthly Usage Report",
+        "consumerId": usage_reporting_id,
+        "startTime": start_time_str,
+        "endTime": end_time_str,
+        "metricValueSets": metric_value_sets,
+        "userLabels": {
+            # These labels are useful for filtering and analysis in GCP
+            "cloudmarketplace.googleapis.com/resource_name": entitlement_name.split('/')[-1], # Entitlement UUID
+            "cloudmarketplace.googleapis.com/container_name": "saas-platform", # Your platform identifier
+            "environment": "prod", # Or 'dev', 'staging'
+            "reporting_period": end_time.strftime('%Y-%m')
+        }
+    }
+
+    report_request_body = {
+        "operations": [operation_payload]
+    }
+
+    try:
+        credentials, project = google.auth.default()
+        service_control_client = build(
+            "servicecontrol",
+            "v1",
+            credentials=credentials,
+            discoveryServiceUrl=SERVICE_CONTROL_API_DISCOVERY_URL,
+            cache_discovery=False
+        )
+
+        # Send the report
+        request = service_control_client.services().report(
+            serviceName=YOUR_SERVICE_NAME,
+            body=report_request_body
+        )
+        response = request.execute()
+
+        if response and not response.get('reportErrors'):
+            print(f"Successfully sent metering report for {usage_reporting_id}. Operation ID: {operation_payload['operationId']}")
+            return True, operation_payload['operationId']
+        else:
+            errors = response.get('reportErrors', [])
+            print(f"Failed to send metering report for {usage_reporting_id}. Errors: {errors}")
+            return False, None
+    except HttpError as e:
+        print(f"HTTP Error sending metering report: {e.resp.status} - {e.content.decode()}")
+        print("Please ensure:")
+        print(f"1. Service Control API is enabled for service '{YOUR_SERVICE_NAME}'.")
+        print("2. Your authenticated service account has 'Service Control Reporter' role (roles/servicecontrol.reporter) for the project associated with your service.")
+        print("3. The 'YOUR_SERVICE_NAME' and 'YOUR_METRIC_NAME' are correctly configured in your Cloud Marketplace product.")
+        print("4. The 'usage_reporting_id' (consumerId) is valid.")
+        return False, None
+    except Exception as e:
+        print(f"An unexpected error occurred while sending metering report: {e}")
+        return False, None
+
+# --- Main Billing Function ---
+
+def perform_monthly_billing():
+    """
+    Iterates through active entitlements and sends a monthly usage report to GCP.
+    This function is intended to be run periodically (e.g., cron job on the 1st of every month).
     """
     print(f"Initiating monthly billing run at {datetime.now()}")
-    #active_accounts = [acc for acc in get_all_accounts() if acc['status'] == 'active']
-    
-    current_month = datetime.utcnow().strftime('%Y-%m')
-    active_entitlments = [ent for ent in get_all_entitlements() if ent['state'] == "ENTITLEMENT_ACTIVE" ]
-    
-    
-    for ent in active_entitlments:
-        customerID = ent["usageReportingId"]
-        account_id = account['account_id']
+
+    current_month_str = datetime.utcnow().strftime('%Y-%m')
+    active_entitlements = get_all_active_entitlements()
+
+    for ent in active_entitlements:
+        entitlement_name = ent.get("name") # Full resource name: providers/p/entitlements/e
+        entitlement_uuid = ent.get("id") # The UUID part
+        usage_reporting_id = ent.get("usageReportingId") # e.g., "project_number:12345"
+
+        if not usage_reporting_id:
+            print(f"Skipping entitlement {entitlement_name}: 'usageReportingId' not found.")
+            continue
+
+        # Load the account's local billing history
+        # We'll use the usageReportingId as the key for local billing history
+        account_data = _load_account_billing_data(usage_reporting_id)
+
         already_billed = any(
-          record['month'] == current_month and record['status'] == 'billed'
-          for record in account.get('billing_history', [])
+            record['month'] == current_month_str and record['status'] == 'billed'
+            for record in account_data.get('billing_history', [])
         )
 
         if not already_billed:
-            print(f"Processing billing for account: {account_id}")
+            print(f"Processing billing for entitlement: {entitlement_name} (Usage Reporting ID: {usage_reporting_id})")
+
             # --- Determine usage for the month ---
             # This is where your actual usage tracking logic would go.
+            # You need to query your internal systems to get the actual usage for this
+            # specific usage_reporting_id for the current month.
             # For demonstration, we'll use a dummy usage amount.
-            dummy_usage = {'user_count': 100} # Example metering dimension
+            # The metric name (e.g., "UsageInGiB" or "user_count") must match your product's configuration.
+            dummy_usage = {'UsageInGiB': 150} # Example: 150 GiB used for the month
+            # Or if your plan is per-user:
+            # dummy_usage = {'user_count': 50} # Example: 50 active users for the month
 
-            success, billing_message_id = send_metering_usage_report(account_id, dummy_usage)
+            success, billing_message_id = send_metering_usage_report(usage_reporting_id, dummy_usage, entitlement_name)
+
+            new_billing_record = {
+                "month": current_month_str,
+                "status": "billed" if success else "failed",
+                "billing_message_id": billing_message_id,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "usage_reported": dummy_usage,
+                "entitlement_name": entitlement_name
+            }
+            if not success:
+                new_billing_record["error"] = "Metering report failed"
+
+            # Update and save the local billing history
+            account_data.setdefault('billing_history', []).append(new_billing_record)
+            _save_account_billing_data(usage_reporting_id, account_data)
 
             if success:
-                new_billing_record = {
-                    "month": current_month,
-                    "amount_usd": 100.00, # This would be calculated based on usage and plan
-                    "status": "billed",
-                    "billing_message_id": billing_message_id,
-                    "timestamp": datetime.utcnow().isoformat() + "Z"
-                }
-                account.setdefault('billing_history', []).append(new_billing_record)
-                save_account(account)
-                print(f"Successfully billed account {account_id} for {current_month}.")
+                print(f"Successfully reported usage for entitlement {entitlement_name} for {current_month_str}.")
             else:
-                print(f"Failed to bill account {account_id} for {current_month}.")
-                # Log this error and potentially retry later
-                failed_billing_record = {
-                    "month": current_month,
-                    "amount_usd": 0.00, # Or estimated amount
-                    "status": "failed",
-                    "billing_message_id": None,
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
-                    "error": "Metering report failed"
-                }
-                account.setdefault('billing_history', []).append(failed_billing_record)
-                save_account(account)
+                print(f"Failed to report usage for entitlement {entitlement_name} for {current_month_str}.")
         else:
-            print(f"Account {account_id} already billed for {current_month}. Skipping.")
+            print(f"Entitlement {entitlement_name} (Usage Reporting ID: {usage_reporting_id}) already billed for {current_month_str}. Skipping.")
+
     print("Monthly billing run completed.")
-        
-        
+
+
+
+
+
 
 # --- CLI Commands (Using Flask's Click integration) ---
 @app.cli.command("bill-month")
