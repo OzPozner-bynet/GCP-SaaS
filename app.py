@@ -146,7 +146,7 @@ def save_account(account_data):
 
     if not account_id:
         raise ValueError("Account data must contain 'account_id'.")
-    account_path = get_account_path(account_id))
+    account_path = get_account_path(account_id)
     print(f"saving path {account_path}")
     with open(account_path, 'w') as f:
         json.dump(account_data, f, indent=4)
