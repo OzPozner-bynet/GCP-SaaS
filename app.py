@@ -99,8 +99,10 @@ def get_account_path(account_id):
     Returns:
         str: The full path to the account's JSON file.
     """
-    account_id=clean_gcp_account_id_prefix(account_id)
-    return os.path.join(ACCOUNT_DIR, f"{account_id}.json")
+    clean_account_id=clean_gcp_account_id_prefix(account_id)
+    if clean_account_id.startswith("providers/bynet-public/accounts/"):
+        clean_account_id=clean_account_id[len("providers/bynet-public/accounts/"):]
+    return os.path.join(ACCOUNT_DIR, f"{clean_account_id}.json")
 
 
 
