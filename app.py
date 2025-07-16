@@ -1262,7 +1262,7 @@ def perform_monthly_billing():
 
     for ent in active_entitlements:
         entitlement_uuid = ent.get("id") # The UUID part
-        print(f"reportint ent{ entitlement_uuid)}")
+        print(f"reportint ent{ entitlement_uuid}")
         pprint.print(ent)
         entitlement_name = ent.get("name") # Full resource name: providers/p/entitlements/e
        
