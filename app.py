@@ -369,11 +369,13 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
     else:
         cleaned_id = account_id
 
+    if account_id.startswith("accounts/providers/bynet-public/accounts"):
+        cleaned_id = account_id[len("accounts/providers/bynet-public/accounts"):]
+
     # The get_gcp_account_id_from_entitlement_id function already handles
     # the 'accounts/' prefix. This check ensures that if the input to this
     # cleaning function somehow still has it, it's removed.
     if cleaned_id.startswith('accounts/'):
-        print(f"Detected and removing standard 'accounts/' prefix from '{cleaned_id}'")
         cleaned_id = cleaned_id[len('accounts/'):]
 
     return cleaned_id
@@ -511,7 +513,7 @@ def listen_to_pubsub():
             entitlement_id_from_gcp = entitlement_parts[-1]
             dummy_account_id = f"gcp-user-{entitlement_id_from_gcp}"
 
-            account = load_account(dummy_account_id)
+            #account = load_account(dummy_account_id)
             #entitlment = load_entitlement(entitlement_id_from_gcp)
 
             if (event_type == 'ACCOUNT_ACTIVE'):
@@ -551,10 +553,12 @@ def listen_to_pubsub():
                          "billing_history": []
                     }
                     save_account(new_account)
+                    account=new_account
                     print(f"Account {my_accouunt_id } created with pending status.Approved entitlement {entitlement_id}")
                     approve_marketplace_entitlement("bynet-public", "bynet-public", entitlement_id)
                     flash(f"New account {my_accouunt_id } from Marketplace is pending review.approved {entitlement_id}", "info")
                     message.ack()
+                    return()
                 else:
                     print(f"Account {my_accouunt_id} already exists. Updating status if needed.")
                     if account['status'] == 'canceled' or account['status'] == 'suspended':
@@ -562,6 +566,9 @@ def listen_to_pubsub():
                         save_account(account)
                         flash(f"Account {dummy_account_id} re-activated to pending from Marketplace.", "info")
                         message.ack()
+                        return()
+                    message.ack()
+                    return()    
 
             elif event_type == 'ENTITLEMENT_CANCELED':
                 if account:
@@ -571,6 +578,7 @@ def listen_to_pubsub():
                     save_account(account)
                     print(f"Account {dummy_account_id} status updated to canceled.")
                     flash(f"Account {dummy_account_id} cancelled via Marketplace.", "warning")
+                    return
                 else:
                     print(f"Cancellation for unknown account/entitlement: {entitlement_id}")
 
