@@ -338,7 +338,7 @@ def send_metering_usage_report(account_id, usage_data):
 
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
 from google.cloud import marketplace_partner_procurement_v1
-def get_account_id(entitlement_id: str) -> str | None
+def get_account_id(entitlement_id: str) -> str | None:
     """
     Retrieves the GCP account ID associated with a GCP Marketplace entitlement ID
     by calling the Google Cloud Marketplace Partner Procurement API.
