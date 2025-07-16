@@ -370,18 +370,14 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
     if account_id.startswith(problematic_prefix):
         print(f"Detected and removing problematic prefix: '{problematic_prefix}' from '{account_id}'")
         cleaned_id = account_id[len(problematic_prefix):]
-    else:
-        cleaned_id = account_id
-
+    
     if account_id.startswith("accounts/providers/bynet-public/accounts"):
         cleaned_id = account_id[len("accounts/providers/bynet-public/accounts"):]
-
-    # The get_gcp_account_id_from_entitlement_id function already handles
-    # the 'accounts/' prefix. This check ensures that if the input to this
-    # cleaning function somehow still has it, it's removed.
+    
     if cleaned_id.startswith('accounts/'):
         cleaned_id = cleaned_id[len('accounts/'):]
-
+    
+    print(f"got account id:{account_id} returning: {cleaned_id}")
     return cleaned_id
 
 def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
