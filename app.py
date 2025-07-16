@@ -347,6 +347,35 @@ from googleapiclient.errors import HttpError
 # This is used to dynamically build the client.
 PARTNER_PROCUREMENT_API_DISCOVERY_URL = "https://cloudcommerceprocurement.googleapis.com/$discovery/rest?version=v1"
 
+def clean_gcp_account_id_prefix(account_id: str) -> str:
+    """
+    Checks if the account_id string contains 'accounts/providers/bynet-public/accounts/'
+    as a prefix and removes it.
+
+    Args:
+        account_id: The input account ID string, potentially with an extra prefix.
+
+    Returns:
+        The cleaned account ID string without the specified prefix.
+    """
+    # The problematic prefix identified in your error message
+    problematic_prefix = 'accounts/providers/bynet-public/accounts/'
+
+    if account_id.startswith(problematic_prefix):
+        print(f"Detected and removing problematic prefix: '{problematic_prefix}' from '{account_id}'")
+        cleaned_id = account_id[len(problematic_prefix):]
+    else:
+        cleaned_id = account_id
+
+    # The get_gcp_account_id_from_entitlement_id function already handles
+    # the 'accounts/' prefix. This check ensures that if the input to this
+    # cleaning function somehow still has it, it's removed.
+    if cleaned_id.startswith('accounts/'):
+        print(f"Detected and removing standard 'accounts/' prefix from '{cleaned_id}'")
+        cleaned_id = cleaned_id[len('accounts/'):]
+
+    return cleaned_id
+
 def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
     """
     Retrieves the GCP account ID associated with a GCP Marketplace entitlement ID
@@ -402,7 +431,7 @@ def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
             # Extract just the number part for cleaner usage.
             if gcp_account_id.startswith("accounts/"):
                 return gcp_account_id.split("accounts/")[1]
-            return gcp_account_id
+            return clean_gcp_account_id_prefix(gcp_account_id)
         else:
             print("Error: 'account' field not found in the retrieved entitlement resource.")
             return None
@@ -494,12 +523,14 @@ def listen_to_pubsub():
             if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
                 if not account:
                     print(f"New subscription received for entitlement: {entitlement_id}")
+                    my_accouunt_id = get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id"))
+                    print(f"got account id {my_accouunt_id}")
                     new_account = {
                         "newPlan": raw_entitlement.get( "newPlan"),
                         "newProduct": raw_entitlement.get("newProduct"),
                         "newOffer": raw_entitlement.get("newOffer"),
                         "orderId": raw_entitlement.get( "orderId"),
-                        "account_id": get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id")),
+                        "account_id": my_accouunt_id,
                     #    "email": f"user_{dummy_account_id}@example.com",
                     #    "company_name": f"Company {dummy_account_id}",
                         "status": "CREATION_REQUESTED",
