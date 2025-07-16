@@ -376,8 +376,8 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
     if account_id.startswith("accounts/providers/bynet-public/accounts"):
         cleaned_id = account_id[len("accounts/providers/bynet-public/accounts"):]
     
-    if cleaned_id.startswith('accounts/'):
-        cleaned_id = cleaned_id[len('accounts/'):]
+    if account_id.startswith('accounts/'):
+        cleaned_id = account_id[len('accounts/'):]
     
     print(f"got account id:{account_id} returning: {cleaned_id}")
     return cleaned_id
