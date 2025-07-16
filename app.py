@@ -1259,11 +1259,10 @@ def perform_monthly_billing():
 
    
     active_entitlements = get_all_active_entitlements()
-
     for ent in active_entitlements:
         entitlement_uuid = ent.get("id") # The UUID part
-        print(f"reportint ent{ entitlement_uuid}")
-        pprint.print(ent)
+        print(f"reportint ent { entitlement_uuid}")
+        pprint.pprint(ent)
         entitlement_name = ent.get("name") # Full resource name: providers/p/entitlements/e
        
         usage_reporting_id = ent.get("usageReportingId") # e.g., "project_number:12345"
