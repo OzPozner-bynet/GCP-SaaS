@@ -520,16 +520,19 @@ def listen_to_pubsub():
                 message.ack()
                 return
             
-            if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
-                if not account:
-                    print(f"New subscription received for entitlement: {entitlement_id}")
-                    try:
-                        my_accouunt_id = get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id"))
-                        print(f"got account id {my_accouunt_id}")
-                    except Exception as e:
-                        print(f"An unexpected error occurred: {e}")
-                        my_accouunt_id = dummy_account_id
+            try:
+                my_accouunt_id = get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id"))
+                print(f"got account id {my_accouunt_id}")
+            except Exception as e:
+                    print(f"An unexpected error occurred: {e}")
+                    my_accouunt_id = dummy_account_id
 
+            account = load_account(clean_gcp_account_id_prefix(my_accouunt_id))
+
+            if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
+                print(f"New subscription received for entitlement: {entitlement_id}")               
+               
+                if not account:              
                     new_account = {
                         "id": my_accouunt_id,
                         "newPlan": raw_entitlement.get( "newPlan"),
@@ -551,11 +554,12 @@ def listen_to_pubsub():
                     flash(f"New account {my_accouunt_id } from Marketplace is pending review.approved {entitlement_id}", "info")
                     message.ack()
                 else:
-                    print(f"Account {dummy_account_id} already exists. Updating status if needed.")
+                    print(f"Account {my_accouunt_id} already exists. Updating status if needed.")
                     if account['status'] == 'canceled' or account['status'] == 'suspended':
                         account['status'] = 'pending'
                         save_account(account)
                         flash(f"Account {dummy_account_id} re-activated to pending from Marketplace.", "info")
+                        message.ack()
 
             elif event_type == 'ENTITLEMENT_CANCELED':
                 if account:
