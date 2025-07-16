@@ -342,7 +342,7 @@ from google.cloud import commerce_consumer_procurement_v1
 
 
 def get_account_id(entitlement_id: str) -> str | None:
-    S"""
+    """
     Retrieves the GCP account ID associated with a GCP Marketplace entitlement ID
     by calling the Google Cloud Commerce Consumer Procurement API's get_order method.
 
