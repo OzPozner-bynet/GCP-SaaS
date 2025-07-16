@@ -358,6 +358,8 @@ def clean_gcp_account_id_prefix(account_id: str) -> str:
     Returns:
         The cleaned account ID string without the specified prefix.
     """
+    if not account_id:
+        return None
     # The problematic prefix identified in your error message
     problematic_prefix = 'accounts/providers/bynet-public/accounts/'
 
@@ -521,7 +523,7 @@ def listen_to_pubsub():
                 return
             
             try:
-                my_accouunt_id = get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id"))
+                my_accouunt_id = clean_gcp_account_id_prefix( get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id")) )
                 print(f"got account id {my_accouunt_id}")
             except Exception as e:
                     print(f"An unexpected error occurred: {e}")
