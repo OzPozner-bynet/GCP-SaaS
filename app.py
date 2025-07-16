@@ -1260,8 +1260,7 @@ def perform_monthly_billing():
    
     active_entitlements = get_all_active_entitlements()
     for ent in active_entitlements:
-        entitlement_uuid = ent.get("id") # The UUID part
-        print(f"reportint ent { entitlement_uuid}")
+        print(f"reportint en:")
         pprint.pprint(ent)
         entitlement_name = ent.get("name") # Full resource name: providers/p/entitlements/e
        
@@ -1289,7 +1288,8 @@ def perform_monthly_billing():
             # specific usage_reporting_id for the current month.
             # For demonstration, we'll use a dummy usage amount.
             # The metric name (e.g., "UsageInGiB" or "user_count") must match your product's configuration.
-            dummy_usage = {"int64Value": "1" } # Example: 150 GiB used for the month
+            #dummy_usage = {"int64Value": "1" } # Example: 150 GiB used for the month
+            dummy_usage = {'user_count': 1}
             # Or if your plan is per-user:
             # dummy_usage = {'user_count': 50} # Example: 50 active users for the month
 
