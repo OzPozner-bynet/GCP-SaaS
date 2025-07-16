@@ -365,7 +365,7 @@ def get_account_id(entitlement_id: str) -> str | None:
     try:
         # Initialize the Partner Procurement Service client
         # Ensure your environment is authenticated (e.g., via gcloud auth application-default login)
-        client = marketplace_partner_procurement_v1.PartnerProcurementServiceClient()
+        client = commerce_consumer_procurement_v1.ConsumerProcurementServiceClient()
 
         # Make the API call to get the entitlement resource
         # The entitlement_id should be in the format "providers/{provider_id}/entitlements/{entitlement_id}"
