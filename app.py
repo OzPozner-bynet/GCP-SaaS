@@ -339,28 +339,30 @@ def send_metering_usage_report(account_id, usage_data):
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
 from google.cloud import commerce_consumer_procurement_v1
 
+from google.oauth2 import google_auth_oauth2 as google_auth
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
+# The API discovery URL for the Cloud Commerce Partner Procurement API
+# This is used to dynamically build the client.
+PARTNER_PROCUREMENT_API_DISCOVERY_URL = "https://cloudcommerceprocurement.googleapis.com/$discovery/rest?version=v1"
 
-def get_account_id(entitlement_id: str) -> str | None:
+def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
     """
     Retrieves the GCP account ID associated with a GCP Marketplace entitlement ID
-    by calling the Google Cloud Commerce Consumer Procurement API's get_order method.
+    by calling the Google Cloud Commerce Partner Procurement API's get method for entitlements.
 
     Args:
         entitlement_id: The GCP Marketplace entitlement ID string. It will be
                         prefixed with "providers/bynet-public/entitlements/"
                         if it doesn't already start with it. This ID is used
-                        as the 'name' for the get_order API call.
+                        as the 'name' for the get_entitlement API call.
 
     Returns:
         The GCP account ID as a string, or None if it cannot be extracted
-        (e.g., if the entitlement/order ID format is unexpected or the API call fails).
+        (e.g., if the entitlement ID format is unexpected or the API call fails).
     """
-    if commerce_consumer_procurement_v1 is None:
-        print("Cannot proceed: Google Cloud Commerce Consumer Procurement library not available.")
-        return None
-
-    # Define the expected prefix for the order/entitlement name
+    # Define the expected prefix for the entitlement name
     expected_prefix = "providers/bynet-public/entitlements/"
 
     # Add the prefix if the input entitlement_id does not start with it
@@ -371,20 +373,29 @@ def get_account_id(entitlement_id: str) -> str | None:
     else:
         full_resource_name = entitlement_id
 
-    print(f"Attempting to get GCP account ID for order/entitlement: {full_resource_name}")
+    print(f"Attempting to get GCP account ID for entitlement: {full_resource_name}")
 
     try:
-        # Initialize the Consumer Procurement Service client
+        # Build the API client dynamically using the discovery document.
+        # This requires the 'google-api-python-client' library.
         # Ensure your environment is authenticated (e.g., via gcloud auth application-default login)
-        client = commerce_consumer_procurement_v1.ConsumerProcurementServiceClient()
+        # The default credentials will be used.
+        credentials, project = google_auth.default()
+        service = build(
+            "cloudcommerceprocurement",
+            "v1",
+            credentials=credentials,
+            discoveryServiceUrl=PARTNER_PROCUREMENT_API_DISCOVERY_URL,
+            cache_discovery=False # Set to True in production for better performance
+        )
 
-        # Make the API call to get the order resource.
-        # The 'name' parameter for get_order expects the full resource path
-        # which in this context is the entitlement ID formatted as a resource name.
-        order_resource = client.get_order(name=full_resource_name)
+        # Make the API call to get the entitlement resource.
+        # The 'get' method on the 'entitlements' resource of the Partner Procurement API
+        # expects the full resource path.
+        entitlement_resource = service.providers().entitlements().get(name=full_resource_name).execute()
 
-        # The 'account' field is expected to be part of the Order resource
-        gcp_account_id = order_resource.account
+        # The 'account' field is expected to be part of the Entitlement resource
+        gcp_account_id = entitlement_resource.get("account")
 
         if gcp_account_id:
             # The account ID often comes in the format "accounts/ACCOUNT_NUMBER".
@@ -393,12 +404,18 @@ def get_account_id(entitlement_id: str) -> str | None:
                 return gcp_account_id.split("accounts/")[1]
             return gcp_account_id
         else:
-            print("Error: 'account' field not found in the retrieved order resource.")
+            print("Error: 'account' field not found in the retrieved entitlement resource.")
             return None
-    except Exception as e:
-        print(f"An error occurred while calling the API or processing order data: {e}")
+    except HttpError as e:
+        print(f"HTTP Error calling API: {e.resp.status} - {e.content.decode()}")
+        print("Please ensure:")
+        print("1. The Cloud Commerce Partner Procurement API is enabled in your GCP project.")
+        print("2. Your authenticated service account has the 'Cloud Commerce Partner Procurement Viewer' role (or equivalent) for the relevant provider and entitlements.")
+        print("3. The entitlement ID is correct and exists for 'bynet-public' provider.")
         return None
-
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
 
 
 
@@ -483,7 +500,7 @@ def listen_to_pubsub():
                         "newProduct": raw_entitlement.get("newProduct"),
                         "newOffer": raw_entitlement.get("newOffer"),
                         "orderId": raw_entitlement.get( "orderId"),
-                        "account_id": get_account_id(raw_entitlement.get( "id")),
+                        "account_id": get_gcp_account_id_from_entitlement_id(raw_entitlement.get( "id")),
                     #    "email": f"user_{dummy_account_id}@example.com",
                     #    "company_name": f"Company {dummy_account_id}",
                         "status": "CREATION_REQUESTED",
