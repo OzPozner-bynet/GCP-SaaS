@@ -128,7 +128,7 @@ def load_account(account_id):
     Returns:
         dict or None: The account dictionary if found, otherwise None.
     """
-    account_path = get_account_path(account_id)
+    account_path = get_account_path(clean_gcp_account_id_prefix( account_id))
     if os.path.exists(account_path):
         with open(account_path, 'r') as f:
             return json.load(f)
@@ -141,9 +141,10 @@ def save_account(account_data):
         account_data (dict): The dictionary containing account details.
     """
     account_id = account_data.get('account_id')
+
     if not account_id:
         raise ValueError("Account data must contain 'account_id'.")
-    account_path = get_account_path(account_id)
+    account_path = get_account_path(clean_gcp_account_id_prefix(  account_id))
     with open(account_path, 'w') as f:
         json.dump(account_data, f, indent=4)
 
