@@ -337,6 +337,60 @@ def send_metering_usage_report(account_id, usage_data):
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
 
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
+from google.cloud import marketplace_partner_procurement_v1
+def get_account_id(entitlement_id: str) -> str | None
+    """
+    Retrieves the GCP account ID associated with a GCP Marketplace entitlement ID
+    by calling the Google Cloud Marketplace Partner Procurement API.
+
+    Args:
+        entitlement_id: The full GCP Marketplace entitlement resource name
+                        (e.g., "providers/your-partner-id/entitlements/some-uuid").
+
+    Returns:
+        The GCP account ID as a string, or None if it cannot be extracted
+        (e.g., if the entitlement ID format is unexpected or the API call fails).
+    """
+     # Define the expected prefix
+    expected_prefix = "providers/bynet-public/entitlements/"
+
+    # Add the prefix if the input entitlement_id does not start with it
+    if not entitlement_id.startswith(expected_prefix):
+        print(f"Adding prefix '{expected_prefix}' to entitlement ID: {entitlement_id}")
+        entitlement_id = expected_prefix + entitlement_id
+
+    
+    print(f"Attempting to get GCP account ID for entitlement: {entitlement_id}")
+
+    try:
+        # Initialize the Partner Procurement Service client
+        # Ensure your environment is authenticated (e.g., via gcloud auth application-default login)
+        client = marketplace_partner_procurement_v1.PartnerProcurementServiceClient()
+
+        # Make the API call to get the entitlement resource
+        # The entitlement_id should be in the format "providers/{provider_id}/entitlements/{entitlement_id}"
+        entitlement_resource = client.get_entitlement(name=entitlement_id)
+
+        # Extract the 'account' field from the entitlement resource
+        gcp_account_id = entitlement_resource.account
+
+        if gcp_account_id:
+            # The account ID often comes in the format "accounts/ACCOUNT_NUMBER".
+            # Extract just the number part for cleaner usage.
+            if gcp_account_id.startswith("accounts/"):
+                return gcp_account_id.split("accounts/")[1]
+            return gcp_account_id
+        else:
+            print("Error: 'account' field not found in the retrieved entitlement resource.")
+            return None
+    except Exception as e:
+        print(f"An error occurred while calling the API or processing entitlement data: {e}")
+        return None
+
+
+
+
+
 def listen_to_pubsub():
     """
     Listens for messages on the specified Pub/Sub subscription for new entitlements
@@ -418,17 +472,14 @@ def listen_to_pubsub():
                         "newProduct": raw_entitlement.get("newProduct"),
                         "newOffer": raw_entitlement.get("newOffer"),
                         "orderId": raw_entitlement.get( "orderId"),
-                        "my-account_id": dummy_account_id,
-                        "account_id": raw_entitlement.get("account"),
-                        "email": f"user_{dummy_account_id}@example.com",
-                        "company_name": f"Company {dummy_account_id}",
-                        "status": "pending",
+                        "account_id": get_account_id(raw_entitlement.get( "id")),
+                    #    "email": f"user_{dummy_account_id}@example.com",
+                    #    "company_name": f"Company {dummy_account_id}",
+                        "status": "CREATION_REQUESTED",
                         "created_at": datetime.utcnow().isoformat() + "Z",
                         "last_updated": datetime.utcnow().isoformat() + "Z",
-                        "marketplace_entitlement_id": entitlement_id,
-                        "marketplace_product_id": "hossted.endpoints.bynet-public.cloud.goog",
-                        "marketplace_plan_id": "per-user-12-month",
-                        "billing_history": []
+                        "marketplace_entitlement_id": raw_entitlement.get( "id"),
+                         "billing_history": []
                     }
                     save_account(new_account)
                     print(f"Account {dummy_account_id} created with pending status.Approved entitlement {entitlement_id}")
@@ -616,7 +667,10 @@ def signup():
                 roles = decoded_data.get("roles", [])
                 print(f"\nUser ID: {user_id}")
                 print(f"User Roles: {roles}")
-
+                pprint.pprint(decoded_data)
+                account_id =user_id
+            else:
+                account_id = f"direct-signup-{uuid.uuid4().hex[:8]}" # Generate a unique ID
 
 
 
@@ -624,7 +678,7 @@ def signup():
             company_name = request.form['company_name']
             email = request.form['email']
             phone = request.form['phone']
-            account_id = f"direct-signup-{uuid.uuid4().hex[:8]}" # Generate a unique ID
+            
         except KeyError as e:
             flash(f"Missing required form field: {e}. Please ensure all fields are filled.", 'danger')
             return redirect(url_for('signup'))    
