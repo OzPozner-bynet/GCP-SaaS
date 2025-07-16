@@ -360,11 +360,15 @@ def listen_to_pubsub():
                 "data": payload, # Store the parsed payload
                 "raw_data": message.data.decode('utf-8'), # Store raw string for debugging
                 "timestamp": datetime.utcnow().isoformat() + "Z",
-                "account_id":  payload["entitlement"]["orderId"] if payload["entitlement"] else "",  
-                "state":  payload["entitlement"]["state"] if payload["entitlement"] else "", 
-                "usageReportingId": payload["usageReportingId"] if payload["usageReportingId"] else ""
+                "eventType": payload["eventType"]
             }
             save_pubsub_message(message_to_store)
+
+            """ 
+            "account_id":  payload["entitlement"]["orderId"] if payload["entitlement"] else "",  
+            "state":  payload["entitlement"]["state"] if payload["entitlement"] else "", 
+            "usageReportingId": payload["usageReportingId"] if payload["usageReportingId"] else ""
+            """
 
             raw_entitlement = payload.get('entitlement')
             entitlement_id = None
@@ -372,7 +376,7 @@ def listen_to_pubsub():
             if isinstance(raw_entitlement, dict):
                 entitlement_id = raw_entitlement.get('id')
                 pprint.pprint('saveing enttitlment')
-                pprint.pprint(aw_entitlement)
+                pprint.pprint(raw_entitlement)
                 save_entitlement(raw_entitlement)
             elif isinstance(raw_entitlement, str):
                 entitlement_id = raw_entitlement
@@ -396,6 +400,14 @@ def listen_to_pubsub():
             account = load_account(dummy_account_id)
             #entitlment = load_entitlement(entitlement_id_from_gcp)
 
+            if (event_type == 'ACCOUNT_ACTIVE'):
+                message.ack()
+                return
+
+            if (event_type == "ENTITLEMENT_ACTIVE"):    
+                message.ack()
+                return
+            
             if ((event_type == 'ENTITLEMENT_NEW' ) or ( event_type == 'ENTITLEMENT_CREATION_REQUESTED')):
                 if not account:
                     print(f"New subscription received for entitlement: {entitlement_id}")
