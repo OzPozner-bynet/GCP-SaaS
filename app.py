@@ -153,7 +153,7 @@ def save_entitlement(entitlement_data):
     Args:
         entitlement_data (dict): The dictionary containing account details.
     """
-    entitlement_id = entitlement_data.get('entitlement_id')
+    entitlement_id = entitlement_data.get('id')
     if not entitlement_id:
         raise ValueError("entitlement data must contain 'entitlement_id'.")
     entitlement_path = get_entitlement_path(entitlement_id)
@@ -379,7 +379,9 @@ def listen_to_pubsub():
                 pprint.pprint(raw_entitlement)
                 save_entitlement(raw_entitlement)
             elif isinstance(raw_entitlement, str):
-                entitlement_id = raw_entitlement
+                print("instace of str")
+                pprint.pprint(raw_entitlement)
+                entitlement_id = None
 
             event_type = payload.get('eventType')
             pprint.pprint("got message event type is {event_type}")
