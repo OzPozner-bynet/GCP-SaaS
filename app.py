@@ -1253,9 +1253,10 @@ def perform_monthly_billing():
     Iterates through active entitlements and sends a monthly usage report to GCP.
     This function is intended to be run periodically (e.g., cron job on the 1st of every month).
     """
-    print(f"Initiating monthly billing run at {datetime.now()}")
-
     current_month_str = datetime.utcnow().strftime('%Y-%m')
+    print(f"Initiating monthly billing run at {datetime.now()} for month: {current_month_str }")
+
+   
     active_entitlements = get_all_active_entitlements()
 
     for ent in active_entitlements:
