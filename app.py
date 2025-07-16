@@ -1132,7 +1132,8 @@ def get_all_active_entitlements() -> list[dict]:
     ids = get_all_entitlements_from_dir()
     active_entitlements = []
     for entitlement_uuid in ids:
-        entitlement = get_entitlement_from_api_by_id(entitlement_uuid)
+        my_id=entitlement_uuid["id"]
+        entitlement = get_entitlement_from_api_by_id(my_id)
         if entitlement:
             if entitlement.get("state") == "ENTITLEMENT_ACTIVE":
                 print(f"Found active entitlement: {entitlement.get('name')}")
