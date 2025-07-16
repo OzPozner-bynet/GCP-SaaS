@@ -337,7 +337,7 @@ def send_metering_usage_report(account_id, usage_data):
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
 
 # --- Pub/Sub Listener (As a separate thread/process in production) ---
-from google.cloud import commerce_consumer_procurement_v1
+
 
 import google.auth # Corrected import
 from googleapiclient.discovery import build
@@ -429,8 +429,6 @@ def get_gcp_account_id_from_entitlement_id(entitlement_id: str) -> str | None:
         if gcp_account_id:
             # The account ID often comes in the format "accounts/ACCOUNT_NUMBER".
             # Extract just the number part for cleaner usage.
-            if gcp_account_id.startswith("accounts/"):
-                return gcp_account_id.split("accounts/")[1]
             return clean_gcp_account_id_prefix(gcp_account_id)
         else:
             print("Error: 'account' field not found in the retrieved entitlement resource.")
